@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<!--
+  研枢 YanShu — AI 科研全链路平台
+ 单页应用入口，包含全站六个界面：搜索推荐、AI科研助手、投稿分析、个人文献库、收藏夹、通知中心
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>研枢 YanShu — AI 科研全链路平台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="CSS/style.css">
+  </head>
+
+  <body>
+
+    <!-- ============ 侧边导航栏 ============ -->
+    <nav class="sidebar" id="sidebar">
+      <!-- 平台 Logo -->
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">研</div>
+        <span class="sidebar-logo-text">研枢</span>
+      </div>
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="折叠/展开侧栏">&#10094;</button>
+
+      <!-- 导航菜单：分"主要"和"管理"两组 -->
+      <div class="sidebar-nav">
+        <div class="sidebar-group-label">主要</div>
+        <a class="nav-item active" data-page="page-search" onclick="navigateTo('page-search')" data-tooltip="论文搜索">
+          <span class="nav-icon">&#128269;</span>
+          <span class="nav-label">论文搜索</span>
+        </a>
+        <a class="nav-item" data-page="page-ai" onclick="navigateTo('page-ai')" data-tooltip="AI科研助手">
+          <span class="nav-icon">&#10024;</span>
+          <span class="nav-label">AI科研助手</span>
+        </a>
+        <a class="nav-item" data-page="page-submit" onclick="navigateTo('page-submit')" data-tooltip="投稿分析">
+          <span class="nav-icon">&#128202;</span>
+          <span class="nav-label">投稿分析</span>
+        </a>
+
+        <div class="sidebar-group-label" style="margin-top:8px;">管理</div>
+        <a class="nav-item" data-page="page-library" onclick="navigateTo('page-library')" data-tooltip="个人文献库">
+          <span class="nav-icon">&#128193;</span>
+          <span class="nav-label">个人文献库</span>
+        </a>
+        <a class="nav-item" data-page="page-favorites" onclick="navigateTo('page-favorites')" data-tooltip="收藏夹" id="favNavItem">
+          <span class="nav-icon">&#11088;</span>
+          <span class="nav-label">收藏夹</span>
+          <span class="fav-badge" id="favBadge" style="display:none;">0</span>
+        </a>
+        <a class="nav-item" data-page="page-notifications" onclick="navigateTo('page-notifications')" data-tooltip="通知">
+          <span class="nav-icon">&#128276;</span>
+          <span class="nav-label">通知</span>
+        </a>
+      </div>
+
+      <!-- 侧栏底部：深色模式切换和用户信息 -->
+      <div class="sidebar-bottom">
+        <button class="dark-toggle" onclick="toggleDarkMode()" title="切换深色/浅色模式">
+          <span class="dark-toggle-icon" id="darkToggleIcon">&#127769;</span>
+          <span class="dark-toggle-label" id="darkToggleLabel">深色模式</span>
+        </button>
+        <div class="user-profile" onclick="alert('&#128100; 个人设置（Demo）\n用户: 张明远\n博士生 · CS')">
+          <div class="user-avatar">张</div>
+          <div class="user-info">
+            <div class="user-name">张博士</div>
+            <div class="user-title">博士生 · CS</div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ============ 主内容包装 ============ -->
+    <div class="main-wrap" id="mainWrap">
+      <!-- 通知面板 -->
+      <div class="notif-panel" id="notifPanel" onclick="event.stopPropagation()">
+        <div class="notif-panel-header">
+          <div class="notif-panel-title">&#128276; 通知 <span id="notifUnreadCount">2</span></div>
+        </div>
+        <div class="notif-panel-list" id="notifList"></div>
+        <div class="notif-panel-footer"><span onclick="closeNotifPanel()">查看全部</span></div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- ============ 界面一：搜索推荐页 ============ -->
+        <div class="page active" id="page-search">
+          <div class="hero-section">
+            <h1 class="hero-title">探索学术前沿</h1>
+            <p class="hero-sub">智能语义检索 · 精准期刊匹配 · 每日更新海量论文</p>
+            <div style="display:flex;gap:12px;justify-content:center;margin:20px 0 8px;flex-wrap:wrap;">
+              <div style="background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.12);border-radius:10px;padding:10px 16px;cursor:pointer;font-size:13px;color:var(--brand-blue);font-weight:500;transition:all 0.2s;display:flex;align-items:center;gap:6px;"
+                   onclick="navigateTo('page-ai');setTimeout(()=>$('aiInput')?.focus(),300);">
+                ✨ 开始AI对话
+              </div>
+              <div style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.12);border-radius:10px;padding:10px 16px;cursor:pointer;font-size:13px;color:var(--brand-purple);font-weight:500;transition:all 0.2s;display:flex;align-items:center;gap:6px;"
+                   onclick="navigateTo('page-submit');">
+                🎯 投稿分析
+              </div>
+              <div style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.12);border-radius:10px;padding:10px 16px;cursor:pointer;font-size:13px;color:var(--brand-green);font-weight:500;transition:all 0.2s;display:flex;align-items:center;gap:6px;"
+                   onclick="navigateTo('page-library');">
+                📚 我的文献库
+              </div>
+            </div>
+            <div class="search-box-wrap">
+              <div class="search-box">
+                <span class="search-icon">&#128269;</span>
+                <input class="search-input" id="searchInput" placeholder="输入论文标题、关键词或研究方向..."
+                onfocus="showSearchHistory()"
+                oninput="if(document.getElementById('searchHistoryPanel').classList.contains('active'))showSearchHistory();"
+                onkeydown="if(event.key==='Enter')addSearchHistory()">
+                <button class="search-btn semantic" onclick="navigateTo('page-ai');setTimeout(()=>{$('aiInput').value='帮我搜索关于'+($('searchInput').value||'深度学习')+'的论文';setTimeout(()=>sendAiMessage(),100)},300);">语义搜索</button>
+                <button class="search-btn main" onclick="addSearchHistory();showToast('🔍 搜索功能已触发: '+($('searchInput').value||'深度学习'),'info')">搜索</button>
+
+                <!-- 搜索历史面板 -->
+                <div class="search-history-panel" id="searchHistoryPanel">
+                  <div class="search-history-header">
+                    <span class="search-history-title">搜索历史</span>
+                    <span class="search-history-clear" onclick="clearSearchHistory()">清空全部</span>
+                  </div>
+                  <ul class="search-history-list" id="searchHistoryList">
+                    <li class="search-history-empty">暂无搜索记录</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 统计信息栏 -->
+          <div class="stats-bar">
+            <div class="stat-card"><div class="stat-number">128</div><div class="stat-label">今日更新论文</div></div>
+            <div class="stat-card"><div class="stat-number">3,286</div><div class="stat-label">活跃科研用户</div></div>
+            <div class="stat-card"><div class="stat-number">47</div><div class="stat-label">综述撰写</div></div>
+            <div class="stat-card"><div class="stat-number">5</div><div class="stat-label">截稿提醒</div></div>
+          </div>
+
+          <!-- 每日推荐论文 -->
+          <div class="section-header">
+            <h3>📰 每日推荐论文</h3>
+            <div class="section-header-filters">
+              <span class="mini-filter active">全部</span>
+              <span class="mini-filter">CCF-A</span>
+              <span class="mini-filter">NLP</span>
+              <span class="mini-filter">CV</span>
+              <span class="mini-filter">ML</span>
+            </div>
+          </div>
+          <div class="daily-rec-grid" id="dailyRecGrid"></div>
+
+          <!-- 筛选标签栏 -->
+          <div class="filter-tags" id="filterTags">
+            <span class="filter-indicator" id="filterIndicator"></span>
+            <span class="filter-tag active">综合排序</span>
+            <span class="filter-tag">最新发表</span>
+            <span class="filter-tag">高引论文</span>
+            <span class="filter-tag">CCF-A</span>
+            <span class="filter-tag">NLP</span>
+            <span class="filter-tag">CV</span>
+          </div>
+
+          <!-- 全部论文列表 -->
+          <div class="section-header">
+            <h3>📚 全部论文</h3>
+            <span style="font-size:12px;color:var(--text-light);" id="paperCountDisplay">共 0 篇</span>
+          </div>
+          <div class="paper-grid" id="paperGrid"></div>
+          <div class="load-more-wrap"><button class="btn-load-more" onclick="loadMorePapers()">加载更多论文</button></div>
+        </div>
+
+        <!-- ============ 界面二：AI科研助手 ============ -->
+        <div class="page" id="page-ai">
+          <div class="ai-layout-new">
+            <!-- 左侧：对话历史栏（可折叠） -->
+            <div class="ai-sidebar-new" id="aiSidebar">
+              <div class="ai-sidebar-header">
+                <span class="ai-sidebar-title">对话历史</span>
+                <button onclick="newConversation()" class="ai-new-chat-btn" title="新建对话">+ 新对话</button>
+              </div>
+              <div class="ai-conv-list-new" id="convList"></div>
+              <div class="ai-sidebar-footer">
+                <button onclick="document.getElementById('aiSidebar').classList.toggle('open')" style="border:none;background:none;cursor:pointer;color:var(--text-mid);font-size:12px;font-family:var(--font-cn);">收起 ◀</button>
+              </div>
+            </div>
+
+            <!-- 中间：对话主区域 -->
+            <div class="ai-main-new">
+              <div class="ai-main-header">
+                <button class="ai-sidebar-toggle-btn" onclick="document.getElementById('aiSidebar').classList.toggle('open')" title="展开对话历史">☰</button>
+                <div class="ai-main-title">AI 科研助手 <span class="badge" style="background:linear-gradient(135deg,#2563EB,#7C3AED);color:#fff;font-size:10px;padding:2px 10px;border-radius:12px;margin-left:8px;">DeepSeek</span></div>
+                <span style="flex:1"></span>
+                <span class="ai-current-title" id="aiCurrentTitle" style="font-size:12px;color:var(--text-light);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+                <button onclick="deleteConversation(currentConv)" class="ai-delete-btn" title="删除当前对话" style="border:none;background:none;cursor:pointer;color:var(--text-mid);font-size:14px;margin-left:8px;display:none;" id="aiDeleteBtn">🗑</button>
+              </div>
+
+              <div class="ai-messages-new" id="aiMessages">
+                <div class="ai-welcome-area" id="aiWelcome">
+                  <div class="ai-welcome-icon">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="12" fill="url(#ai-grad)"/><text x="24" y="32" text-anchor="middle" fill="white" font-size="24" font-weight="700">研</text><defs><linearGradient id="ai-grad" x1="0" y1="0" x2="48" y2="48"><stop stop-color="#2563EB"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs></svg>
+                  </div>
+                  <h2 class="ai-welcome-title">你好，我是研枢AI科研助手</h2>
+                  <p class="ai-welcome-sub">由 DeepSeek 大模型驱动，专注于学术科研领域。选择一个话题开始，或直接输入你的问题。</p>
+                  <div class="ai-topic-grid" id="aiTopicGrid">
+                    <div class="ai-topic-card" onclick="pickTopic('literature_review')"><div class="ai-topic-icon">📝</div><div class="ai-topic-label">撰写文献综述</div><div class="ai-topic-desc">就某个研究方向撰写系统性综述</div></div>
+                    <div class="ai-topic-card" onclick="pickTopic('paper_polish')"><div class="ai-topic-icon">✨</div><div class="ai-topic-label">润色论文段落</div><div class="ai-topic-desc">优化语法、流畅度和学术表达</div></div>
+                    <div class="ai-topic-card" onclick="pickTopic('experiment_compare')"><div class="ai-topic-icon">📊</div><div class="ai-topic-label">实验对比分析</div><div class="ai-topic-desc">对比不同方法的优缺点和性能</div></div>
+                    <div class="ai-topic-card" onclick="pickTopic('paper_explain')"><div class="ai-topic-icon">📖</div><div class="ai-topic-label">论文精读解释</div><div class="ai-topic-desc">深入解读论文的核心方法和贡献</div></div>
+                    <div class="ai-topic-card" onclick="pickTopic('method_design')"><div class="ai-topic-icon">🔬</div><div class="ai-topic-label">研究方法设计</div><div class="ai-topic-desc">帮你设计实验方案和评估指标</div></div>
+                    <div class="ai-topic-card" onclick="pickTopic('code_help')"><div class="ai-topic-icon">💻</div><div class="ai-topic-label">代码与实现</div><div class="ai-topic-desc">辅助实现论文算法和模型训练</div></div>
+                    <div class="ai-topic-card" onclick="pickTopic('submission_advice')"><div class="ai-topic-icon">🎯</div><div class="ai-topic-label">投稿选刊建议</div><div class="ai-topic-desc">根据论文内容推荐合适期刊/会议</div></div>
+                    <div class="ai-topic-card" onclick="pickTopic('research_trend')"><div class="ai-topic-icon">🔍</div><div class="ai-topic-label">研究趋势分析</div><div class="ai-topic-desc">了解某个领域的最新研究热点</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ai-input-area-new">
+                <textarea id="aiInput" placeholder="输入你的科研问题，Shift+Enter 换行，Enter 发送..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiMessage();}" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';"></textarea>
+                <button class="ai-send-btn-new" onclick="sendAiMessage()" id="aiSendBtn" title="发送消息">➤</button>
+              </div>
+            </div>
+
+            <!-- 右侧：文档展示与编辑区 -->
+            <div class="ai-editor-new" id="aiEditorPanel">
+              <div class="ai-editor-header">
+                <span class="ai-editor-title" id="aiEditorTitle">📄 文档编辑区</span>
+                <div class="ai-editor-actions">
+                  <button class="btn-tool primary" onclick="saveEditor()">💾 保存</button>
+                  <button class="btn-tool" onclick="exportWord()">导出 Word</button>
+                  <button class="btn-tool" onclick="exportLatex()">导出 LaTeX</button>
+                </div>
+              </div>
+              <div class="ai-editor-body" id="aiEditorBody" contenteditable="true">
+                <div class="md-content">
+                  <p style="color:var(--text-light);font-style:italic;text-align:center;margin-top:40px;">AI 生成的文档将展示在这里<br/>你可以直接编辑、保存或导出</p>
+                </div>
+              </div>
+              <div class="ai-editor-status">
+                <span id="aiEditorStatusLabel">📝 可编辑</span>
+                <span style="font-size:11px;color:var(--text-light);" id="aiEditorWordCount">0 字</span>
+              </div>
+            </div>
+          </div>
+          <div class="ai-mode-bar">
+            <button class="mode-btn active" onclick="switchMode(this)">对话模式</button>
+            <button class="mode-btn" onclick="switchMode(this)">自动科研模式</button>
+          </div>
+        </div>
+
+        <!-- ============ 界面三：投稿分析页 ============ -->
+        <div class="page" id="page-submit">
+          <div class="sub-layout-new">
+            <!-- 左侧：投稿分析区 -->
+            <div class="sub-left-new">
+              <div class="sub-header">
+                <h2>最新会议投稿分析</h2>
+                <button class="btn-tool" onclick="showCalendarOverlay()" title="截稿日历">&#x1F4C5; 日历</button>
+              </div>
+              <!-- 筛选栏 -->
+              <div class="sub-filters">
+                <select class="sub-filter-select" onchange="renderJournals()" id="subCcfFilter">
+                  <option value="all">CCF：全部</option>
+                  <option value="A">CCF-A</option>
+                  <option value="B">CCF-B</option>
+                  <option value="C">CCF-C</option>
+                </select>
+                <select class="sub-filter-select" onchange="renderJournals()" id="subDomainFilter">
+                  <option value="all">方向：全部</option>
+                  <option value="计算机视觉">计算机视觉</option>
+                  <option value="自然语言处理">自然语言处理</option>
+                  <option value="机器学习">机器学习</option>
+                  <option value="人工智能">人工智能</option>
+                </select>
+              </div>
+              <!-- 期刊卡片网格 -->
+              <div class="journal-grid-new" id="journalGrid"></div>
+              <!-- 趋势图表 -->
+              <div class="trend-section">
+                <h3>投稿趋势分析</h3>
+                <div id="trendChart"></div>
+              </div>
+              <div class="word-cloud-section" style="display:none;" id="wordCloudSection">
+                <h3>研究热点词云</h3>
+                <div id="wordCloudWrap"><svg id="wordCloud" width="100%" height="240"></svg></div>
+              </div>
+              <div class="detail-trend-section" style="display:none;" id="detailTrendSection">
+                <h3>顶级会议录用率详细趋势 (2019-2024)</h3>
+                <div id="detailTrendChart"></div>
+              </div>
+            </div>
+            <!-- 右侧：AI投稿顾问对话窗口 -->
+            <div class="sub-right-new">
+              <div class="sub-chat-new">
+                <div class="sub-chat-header">
+                  &#x1F4CB; 投稿分析助手 <span class="badge" style="background:linear-gradient(135deg,#2563EB,#7C3AED);color:#fff;font-size:10px;padding:2px 10px;border-radius:12px;">DeepSeek</span>
+                </div>
+                <div class="sub-chat-msgs" id="subChatMsgs">
+                  <div class="ai-msg ai" style="max-width:95%">
+                    <div class="ai-msg-avatar" style="width:28px;height:28px;font-size:12px;">A</div>
+                    <div class="ai-msg-bubble" style="font-size:13px;">您好！我是投稿分析助手。我可以帮您：<br/><br/>&#x2022; <strong>方向匹配</strong> — 分析论文适合投哪个会议<br/>&#x2022; <strong>格式检查</strong> — 检查是否符合目标会议要求<br/>&#x2022; <strong>时间规划</strong> — 根据截稿日期倒推时间<br/>&#x2022; <strong>审稿分析</strong> — 分析拒稿原因并给出建议<br/><br/>请告诉我您的需求。</div>
+                  </div>
+                </div>
+                <div class="sub-chat-input">
+                  <input placeholder="输入您的问题..." id="subChatInput" onkeydown="if(event.key==='Enter')sendSubChat()">
+                  <button onclick="sendSubChat()">&#10148;</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 截稿日历弹窗 -->
+        <div class="cal-overlay" id="calOverlay" onclick="if(event.target===this)closeCalendarOverlay()">
+          <div class="cal-modal">
+            <div class="cal-modal-header">
+              &#x1F4C5; 截稿日历
+              <button class="cal-close-btn" onclick="closeCalendarOverlay()">&#x2715;</button>
+            </div>
+            <div class="cal-filters">
+              <select class="sub-filter-select" id="calCcfFilter" onchange="renderCalendar()"><option value="all">CCF: 全部</option><option value="A">CCF-A</option><option value="B">CCF-B</option></select>
+            </div>
+            <div class="cal-grid-wrap" id="calGridWrap">
+              <!-- 日历内容由 JS 动态渲染 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ 界面四：个人文献库 ============ -->
+        <div class="page" id="page-library">
+          <div class="lib-layout">
+            <div class="lib-left">
+              <div class="lib-section">
+                <div class="lib-section-title">文件夹</div>
+                <div class="folder-item active" onclick="selectFolder(this)"><span>&#128193; 全部文献</span><span class="folder-count">128</span></div>
+                <div class="folder-item" onclick="selectFolder(this)"><span>&#128193; 毕业设计/参考文献</span><span class="folder-count">20</span></div>
+                <div class="folder-item" onclick="selectFolder(this)"><span>&#128193; 课程作业</span><span class="folder-count">15</span></div>
+                <div class="folder-item" onclick="selectFolder(this)"><span>&#128193; 综述撰写</span><span class="folder-count">22</span></div>
+                <div class="folder-item" onclick="selectFolder(this)"><span>&#128193; 待读列表</span><span class="folder-count">12</span></div>
+              </div>
+              <div class="lib-section">
+                <div class="lib-section-title">标签云</div>
+                <div class="tag-cloud">
+                  <span class="tag-item" onclick="selectLibTag(this)">精读(8)</span>
+                  <span class="tag-item" onclick="selectLibTag(this)">方法论参考(12)</span>
+                  <span class="tag-item" onclick="selectLibTag(this)">实验对比(6)</span>
+                  <span class="tag-item" onclick="selectLibTag(this)">待讨论(3)</span>
+                </div>
+              </div>
+              <div class="lib-section">
+                <div class="lib-section-title">统计概览</div>
+                <div class="lib-stat">
+                  <div class="lib-stat-row"><span>总计</span><span>128 篇</span></div>
+                  <div class="lib-stat-row"><span>已读</span><span>59%</span></div>
+                  <div class="lib-stat-bar"><div class="lib-stat-fill" style="width:59%"></div></div>
+                  <div class="lib-stat-row"><span>在读</span><span>6%</span></div>
+                  <div class="lib-stat-bar"><div class="lib-stat-fill" style="width:6%"></div></div>
+                  <span style="font-size:12px;color:var(--brand-blue);cursor:pointer;display:block;margin-top:8px;" onclick="showStatsOverlay()">查看详情分析 &#x2192;</span>
+                </div>
+              </div>
+            </div>
+            <div class="lib-right">
+              <div class="lib-toolbar">
+                <input class="lib-search-input" placeholder="在文献库中搜索..." id="libSearch" oninput="renderLibrary()">
+                <select class="lib-select" id="libSort" onchange="sortLibrary()">
+                  <option>排序: 收藏时间</option>
+                  <option>排序: 发表时间</option>
+                  <option>排序: 引用数</option>
+                </select>
+                <button class="btn-action" onclick="toggleLibView()" id="libViewBtn">&#9776; 列表</button>
+              </div>
+              <div style="display:flex;gap:12px;font-size:12px;color:var(--text-mid);margin-bottom:6px;padding:0 2px;">
+                <span>共 <strong id="libTotalCount">0</strong> 篇</span>
+                <span>● <strong id="libReadCount">0</strong> 已读</span>
+                <span>◐ <strong id="libReadingCount">0</strong> 在读</span>
+                <span>○ <strong id="libUnreadCount">0</strong> 未读</span>
+              </div>
+              <div class="lib-list" id="libList"></div>
+              <div class="batch-bar" id="batchBar">
+                <span>已选 <span class="batch-count" id="batchCount">0</span> 项</span>
+                <button class="btn" onclick="batchMove()">移动到文件夹</button>
+                <button class="btn" onclick="batchTag()">批量标签</button>
+                <button class="btn danger" onclick="batchDelete()">批量删除</button>
+              </div>
+              <!-- 统计概览弹窗 -->
+              <div class="stats-overlay" id="statsOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:5000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeStatsOverlay()">
+                <div class="stats-modal" onclick="event.stopPropagation()">
+                  <div class="stats-modal-header">
+                    &#x1F4CA; 文献库统计概览
+                    <button class="cal-close-btn" onclick="closeStatsOverlay()">&#x2715;</button>
+                  </div>
+                  <div class="stats-modal-body">
+                    <div class="stats-overview-row">
+                      <div class="stats-overview-item"><div class="stats-big-num" id="statsTotalPapers">0</div><div class="stats-big-label">总论文数</div></div>
+                      <div class="stats-overview-item"><div class="stats-big-num" id="statsReadPapers">0</div><div class="stats-big-label">已读</div></div>
+                      <div class="stats-overview-item"><div class="stats-big-num" id="statsReadingPapers">0</div><div class="stats-big-label">在读</div></div>
+                      <div class="stats-overview-item"><div class="stats-big-num" id="statsUnreadPapers">0</div><div class="stats-big-label">未读</div></div>
+                    </div>
+                    <h4 style="font-size:14px;font-weight:600;margin:16px 0 8px;">按CCF级别分布</h4>
+                    <div id="statsCcfDist" style="display:flex;flex-direction:column;gap:6px;"></div>
+                    <h4 style="font-size:14px;font-weight:600;margin:16px 0 8px;">阅读进度统计</h4>
+                    <div id="statsProgress" style="display:flex;flex-direction:column;gap:6px;"></div>
+                    <h4 style="font-size:14px;font-weight:600;margin:16px 0 8px;">最近收藏</h4>
+                    <div id="statsRecent" style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--text-mid);"></div>
+                  </div>
+                  <button class="btn primary" onclick="closeStatsOverlay()" style="margin-top:16px;width:100%;">关闭</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ 界面五：收藏夹 ============ -->
+        <div class="page" id="page-favorites">
+          <div class="fav-page-header">
+            <h2>⭐ 我的收藏</h2>
+            <p>管理你收藏的论文，按文件夹和标签分类浏览</p>
+          </div>
+          <div class="fav-page-toolbar">
+            <input class="lib-search-input" placeholder="在收藏中搜索..." id="favSearch" oninput="renderFavoritesPage()" style="flex:1;max-width:360px;">
+            <select class="sub-filter-select" id="favFolderFilter" onchange="renderFavoritesPage()">
+              <option value="all">全部文件夹</option>
+              <option value="毕业设计/参考文献">毕业设计/参考文献</option>
+              <option value="综述撰写">综述撰写</option>
+              <option value="待读列表">待读列表</option>
+              <option value="课程作业">课程作业</option>
+            </select>
+          </div>
+          <div class="fav-page-grid" id="favPageGrid"></div>
+          <div id="favPageEmpty" style="display:none;text-align:center;padding:60px 20px;color:var(--text-light);">
+            <div style="font-size:48px;margin-bottom:16px;">⭐</div>
+            <p style="font-size:16px;font-weight:500;color:var(--text-mid);">还没有收藏任何论文</p>
+            <p style="font-size:13px;margin-top:4px;">在搜索结果或阅读详情页点击收藏即可添加</p>
+            <button onclick="navigateTo('page-search')" style="margin-top:16px;padding:8px 24px;border-radius:20px;border:none;background:var(--brand-blue);color:#fff;cursor:pointer;font-size:13px;font-family:var(--font-cn);">去搜索论文</button>
+          </div>
+        </div>
+
+        <!-- ============ 界面六：通知中心 ============ -->
+        <div class="page" id="page-notifications">
+          <div class="fav-page-header">
+            <h2>🔔 通知中心</h2>
+            <p>查看系统通知、截稿提醒和文献更新</p>
+          </div>
+          <div class="notif-page-list" id="notifPageList"></div>
+        </div>
+
+      </div><!-- /page-content -->
+    </div><!-- /main-wrap -->
+
+    <!-- ============ 论文阅读面板（浮层） ============ -->
+    <div class="reading-overlay" id="readingOverlay">
+      <div class="reading-topbar">
+        <button class="reading-back" onclick="closeReading()">&#10094;</button>
+        <span class="reading-title" id="readingTitle">论文阅读</span>
+        <div class="reading-tabs">
+          <button class="reading-tab active" onclick="switchReadingTab(this,'pdf')">PDF阅读</button>
+          <button class="reading-tab" onclick="switchReadingTab(this,'ai')">AI速读</button>
+          <button class="reading-tab" onclick="switchReadingTab(this,'similar')">相似论文</button>
+        </div>
+        <button class="reading-close" onclick="closeReading()">&times;</button>
+      </div>
+      <div class="reading-body">
+        <div class="reading-pdf" id="readingPdf">
+          <div class="reading-progress-wrap"><div class="reading-progress-fill" id="readingProgressFill"></div></div>
+          <div class="reading-pdf-inner" id="readingPdfInner">
+            <div class="pdf-title" id="pdfDetailTitle">Attention Is All You Need</div>
+            <div class="pdf-meta" id="pdfDetailMeta">
+              Vaswani et al. | NeurIPS 2017 | Google Research<br>
+              引用数: 98,700+ | DOI: 10.5555/3295222.3295349
+            </div>
+            <div class="pdf-section">
+              <h3>Abstract</h3>
+              <p>The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.</p>
+            </div>
+            <div class="pdf-section">
+              <h3>1. Introduction</h3>
+              <p>Recurrent neural networks, long short-term memory and gated recurrent neural networks in particular, have been firmly established as state of the art approaches in sequence modeling and transduction problems such as language modeling and machine translation. Numerous efforts have since continued to push the boundary of recurrent language models and encoder-decoder architectures.</p>
+              <p>The Transformer, proposed in this work, eschews recurrence and instead relies entirely on an attention mechanism to draw global dependencies between input and output. The Transformer allows for significantly more parallelization and can reach a new state of the art in translation quality after being trained for as little as twelve hours on eight GPU.</p>
+            </div>
+            <div class="pdf-section">
+              <h3>3. Model Architecture</h3>
+              <p>Most competitive neural sequence transduction models have an encoder-decoder structure. The encoder maps an input sequence of symbol representations to a sequence of continuous representations. The decoder then generates an output sequence of symbols one element at a time.</p>
+              <div class="formula" onclick="openFormulaInterpretation('attention')">Attention(Q,K,V) = softmax(QK<sup>T</sup>/&radic;d<sub>k</sub>)V</div>
+              <p>The Transformer uses multi-head attention, where the attention function is computed in parallel over h heads:</p>
+              <div class="formula" onclick="openFormulaInterpretation('multihead')">MultiHead(Q,K,V) = Concat(head<sub>1</sub>,...,head<sub>h</sub>)W<sup>O</sup></div>
+              <div class="formula" onclick="openFormulaInterpretation('head')">head<sub>i</sub> = Attention(QW<sub>i</sub><sup>Q</sup>, KW<sub>i</sub><sup>K</sup>, VW<sub>i</sub><sup>V</sup>)</div>
+            </div>
+          </div>
+          <div class="pdf-float-menu" id="pdfFloatMenu">
+            <button onclick="onPdfFloatAction('translate')">翻译</button>
+            <button onclick="onPdfFloatAction('explain')">解释</button>
+            <button onclick="onPdfFloatAction('question')">提问</button>
+          </div>
+        </div>
+        <div class="reading-ai">
+          <div class="reading-ai-tabs">
+            <button class="reading-ai-tab active" onclick="switchReadingAiTab(this,'summary')">摘要</button>
+            <button class="reading-ai-tab" onclick="switchReadingAiTab(this,'novelty')">创新</button>
+            <button class="reading-ai-tab" onclick="switchReadingAiTab(this,'experiment')">实验</button>
+            <button class="reading-ai-tab" onclick="switchReadingAiTab(this,'qa')">问答</button>
+            <button class="reading-ai-tab" onclick="switchReadingAiTab(this,'translate')">翻译</button>
+          </div>
+          <div class="reading-ai-content" id="readingAiContent">
+            <h4 style="font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text-dark);">论文摘要</h4>
+            <p>本文提出Transformer架构，完全基于注意力机制，摒弃了循环和卷积结构。核心贡献包括：</p>
+            <ul style="padding-left:16px;margin-top:6px;">
+              <li>提出缩放点积注意力（Scaled Dot-Product Attention）</li>
+              <li>设计多头注意力机制捕获不同子空间特征</li>
+              <li>引入位置编码处理序列顺序信息</li>
+              <li>在WMT 2014英德翻译任务上达到28.4 BLEU，比现有最佳模型提升2+ BLEU</li>
+            </ul>
+          </div>
+          <div class="reading-ai-input">
+            <input placeholder="对论文提出你的问题..." id="readingAiInput" onkeydown="if(event.key==='Enter'){askReadingQuestion()}">
+            <button onclick="askReadingQuestion()">&#10148;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 公式解读弹窗 -->
+      <div class="formula-overlay" id="formulaOverlay" onclick="if(event.target===this)closeFormulaModal()">
+        <div class="formula-modal">
+          <h3 id="formulaTitle">公式解读</h3>
+          <div class="formula-display" id="formulaDisplay">Attention(Q,K,V) = softmax(QK<sup>T</sup> / &radic;d<sub>k</sub>) V</div>
+          <div class="formula-section">
+            <h4>逐步解读</h4>
+            <p id="formulaStepByStep">该公式定义了缩放点积注意力（Scaled Dot-Product Attention）的计算过程。首先将查询矩阵 Q 与键矩阵 K 的转置相乘，得到注意力分数矩阵。除以 &radic;d<sub>k</sub> 进行缩放以防止梯度消失，再通过 softmax 归一化为权重分布，最后与值矩阵 V 加权求和得到输出。</p>
+          </div>
+          <div class="formula-section">
+            <h4>变量含义</h4>
+            <p id="formulaVariables"><span class="variable">Q</span> 查询矩阵，维度为 n &times; d<sub>k</sub>，表示当前查询的特征表示<br><span class="variable">K</span> 键矩阵，维度为 m &times; d<sub>k</sub>，表示被查询的键特征<br><span class="variable">V</span> 值矩阵，维度为 m &times; d<sub>v</sub>，表示被聚合的值特征<br><span class="variable">d<sub>k</sub></span> 缩放因子，通常取键向量的维度，用于防止点积过大</p>
+          </div>
+          <div class="formula-section">
+            <h4>物理意义</h4>
+            <p id="formulaMeaning">注意力机制的本质是"查询-键值对"的软寻址过程。Q 中的每个查询通过点积计算与所有键 K 的相关性，softmax 将相关性转化为概率分布，最终按概率加权聚合值 V。这种机制使模型能够自适应地关注输入序列中最相关的部分，是Transformer能够有效捕获长距离依赖的核心原因。</p>
+          </div>
+          <button class="formula-close" onclick="closeFormulaModal()">关闭</button>
+        </div>
+      </div>
+
+      <div class="pdf-page-controls" id="pdfPageControls" style="display:none;justify-content:center;align-items:center;gap:16px;padding:12px;background:var(--bg-light);border:1px solid #E5E7EB;max-width:800px;margin:0 auto;border-radius:0 0 8px 8px;">
+        <button onclick="prevPdfPage()" style="padding:8px 16px;border:1px solid #E5E7EB;border-radius:6px;background:white;cursor:pointer;font-size:13px;font-family:var(--font-cn);">← 上一页</button>
+        <span id="pdfPageIndicator" style="font-size:13px;font-weight:500;min-width:60px;text-align:center;">1 / 1</span>
+        <button onclick="nextPdfPage()" style="padding:8px 16px;border:1px solid #E5E7EB;border-radius:6px;background:white;cursor:pointer;font-size:13px;font-family:var(--font-cn);">下一页 →</button>
+      </div>
+
+      <div class="reading-bottombar">
+        <button class="btn primary" id="readingFavBtn" onclick="toggleReadingFav()">&#9825; 收藏</button>
+        <button class="btn" onclick="downloadPdf()">&#128229; 下载PDF</button>
+        <button class="btn" onclick="exportReadingCitation()">&#128221; 导出引用</button>
+        <button class="btn" onclick="shareReadingPaper()">&#128228; 分享</button>
+      </div>
+    </div>
+
+    <!-- ============ 工具弹窗：收藏面板 ============ -->
+    <div class="fav-popover" id="favPopover" style="display:none;" onclick="event.stopPropagation()">
+      <h4 id="favPopoverTitle">收藏论文</h4>
+      <div class="fav-folder-label">收藏到文件夹</div>
+      <div class="fav-folder-list" id="favFolderList">
+        <div class="fav-folder-item selected" data-folder="毕业设计" onclick="selectFavFolder(this)">&#128193; 毕业设计/参考文献</div>
+        <div class="fav-folder-item" data-folder="综述撰写" onclick="selectFavFolder(this)">&#128193; 综述撰写</div>
+        <div class="fav-folder-item" data-folder="待读列表" onclick="selectFavFolder(this)">&#128193; 待读列表</div>
+      </div>
+      <div class="fav-folder-new">
+        <input placeholder="新建文件夹..." id="favNewFolderInput">
+        <button onclick="createFavFolder()">+</button>
+      </div>
+      <div class="fav-folder-label">添加标签（逗号分隔）</div>
+      <input class="fav-tag-input" placeholder="如：精读, 方法论参考" id="favTagInput">
+      <div class="fav-actions">
+        <button class="fav-btn-confirm" id="favConfirmBtn" onclick="confirmFav()">确认收藏</button>
+        <button class="fav-btn-cancel" onclick="cancelFav()">取消</button>
+      </div>
+    </div>
+
+    <!-- ============ 工具弹窗：命令面板 ============ -->
+    <div class="cmd-palette" id="cmdPalette" onclick="if(event.target===this)closeCmdPalette()">
+      <div class="cmd-panel">
+        <div class="cmd-input-wrap">
+          <span class="cmd-icon">&#128269;</span>
+          <input id="cmdInput" placeholder="输入命令或搜索..." onkeydown="cmdKeydown(event)" autofocus>
+          <span class="cmd-item-shortcut" style="background:#E5E7EB;">Esc</span>
+        </div>
+        <div class="cmd-list" id="cmdList"></div>
+      </div>
+    </div>
+
+    <!-- ============ 工具弹窗：快捷键帮助 ============ -->
+    <div class="shortcut-overlay" id="shortcutOverlay" onclick="if(event.target===this)toggleShortcutPanel()">
+      <div class="shortcut-panel">
+        <h3>&#9000; 键盘快捷键</h3>
+        <p class="sub">快速操作，提升效率</p>
+        <div class="shortcut-list">
+          <div class="shortcut-row"><span class="label">打开命令面板</span><span class="keys"><kbd>Ctrl</kbd><kbd>K</kbd></span></div>
+          <div class="shortcut-row"><span class="label">切换到论文搜索</span><span class="keys"><kbd>Ctrl</kbd><kbd>1</kbd></span></div>
+          <div class="shortcut-row"><span class="label">切换到AI科研助手</span><span class="keys"><kbd>Ctrl</kbd><kbd>2</kbd></span></div>
+          <div class="shortcut-row"><span class="label">切换到投稿分析</span><span class="keys"><kbd>Ctrl</kbd><kbd>3</kbd></span></div>
+          <div class="shortcut-row"><span class="label">切换到个人文献库</span><span class="keys"><kbd>Ctrl</kbd><kbd>4</kbd></span></div>
+          <div class="shortcut-row"><span class="label">关闭弹窗/面板</span><span class="keys"><kbd>Esc</kbd></span></div>
+          <div class="shortcut-row"><span class="label">查看快捷键</span><span class="keys"><kbd>Shift</kbd><kbd>/</kbd></span></div>
+          <div class="shortcut-row"><span class="label">切换深色模式</span><span class="keys"><kbd>Ctrl</kbd><kbd>D</kbd></span></div>
+        </div>
+        <button class="shortcut-close-btn" onclick="toggleShortcutPanel()">关闭</button>
+      </div>
+    </div>
+
+    <!-- ============ 工具弹窗：版本演进 ============ -->
+    <button class="version-trigger" onclick="toggleVersionPanel()">&#128214; 版本演进</button>
+    <div class="version-overlay" id="versionOverlay" onclick="if(event.target===this)toggleVersionPanel()">
+      <div class="version-panel">
+        <h2>版本演进历程</h2>
+        <p class="sub">从概念原型到智能科研平台的迭代之路</p>
+        <div class="version-cards">
+          <div class="version-card v1">
+            <div class="version-card-header">
+              <span><strong>v1.0</strong> 基础版 &mdash; 深色线框风格</span>
+              <span class="tag">MVP</span>
+            </div>
+            <div class="version-card-body">
+              <ul>
+                <li>深色线框风格的UI原型，验证核心交互流程</li>
+                <li>左侧导航栏的基本框架，仅包含主要功能入口</li>
+                <li>论文搜索功能的基础实现（文本搜索+手动筛选）</li>
+                <li>论文卡片列表呈现，无匹配度/标签等高级特征</li>
+                <li>搜索历史的基础存储（无localStorage持久化）</li>
+                <li>静态期刊信息展示，无匹配度计算</li>
+                <li>无AI对话、无ECharts可视化、无阅读浮层</li>
+              </ul>
+            </div>
+          </div>
+          <div class="version-card v2">
+            <div class="version-card-header">
+              <span><strong>v2.0</strong> 增强版 &mdash; 当前完整视觉设计</span>
+              <span class="tag">Current</span>
+            </div>
+            <div class="version-card-body">
+              <ul>
+                <li>完整的品牌色体系（蓝/紫/绿/橙/红），统一的CSS变量管理</li>
+                <li>Google Fonts中文+英文字体，提升可读性</li>
+                <li>侧边栏可折叠动画（220px / 64px过渡）</li>
+                <li>5个核心页面：搜索推荐 / AI科研助手 / 投稿分析 / 文献库 / 阅读浮层</li>
+                <li>论文卡片带CCF等级标识 + 匹配度标签 + 三个操作按钮</li>
+                <li>搜索历史面板（localStorage持久化、增删改查）</li>
+                <li>AI科研助手：对话历史切换 + 富文本编辑区 + LaTeX公式占位</li>
+                <li>投稿分析：期刊卡片 + 环形进度条 + 匹配度 + AI投稿顾问对话</li>
+                <li>ECharts趋势折线图（3个会议近5年录用率）</li>
+                <li>个人文献库：文件夹树 + 标签云 + 批量操作 + 搜索排序</li>
+                <li>论文阅读浮层：PDF仿真渲染 + AI助手面板（5个Tab）</li>
+                <li>卡片hover上浮、页面淡入、交错入场动画</li>
+                <li>响应式布局适配（3列/2列/1列）</li>
+              </ul>
+            </div>
+          </div>
+          <div class="version-card v3">
+            <div class="version-card-header">
+              <span><strong>v3.0</strong> 进化版 &mdash; 未来规划</span>
+              <span class="tag">Planned</span>
+            </div>
+            <div class="version-card-body">
+              <p style="margin-bottom:10px;font-weight:500;color:var(--text-dark);">v3.0 将引入三大核心功能，深度重塑科研工作流：</p>
+
+              <div class="v3-mockup">
+                <div class="v3-mockup-header">&#128200; 跨论文知识图谱关联</div>
+                <div class="v3-mockup-body">
+                  <svg class="kgraph-svg" viewBox="0 0 600 90">
+                    <!-- edges -->
+                    <line class="kgraph-edge" x1="80" y1="45" x2="190" y2="25"/>
+                    <line class="kgraph-edge highlight" x1="80" y1="45" x2="190" y2="65"/>
+                    <line class="kgraph-edge" x1="190" y1="25" x2="310" y2="45"/>
+                    <line class="kgraph-edge" x1="190" y1="65" x2="310" y2="45"/>
+                    <line class="kgraph-edge highlight" x1="310" y1="45" x2="430" y2="25"/>
+                    <line class="kgraph-edge" x1="310" y1="45" x2="430" y2="65"/>
+                    <line class="kgraph-edge" x1="430" y1="25" x2="530" y2="45"/>
+                    <line class="kgraph-edge" x1="430" y1="65" x2="530" y2="45"/>
+                    <!-- nodes -->
+                    <circle class="kgraph-node" cx="80" cy="45" r="14" fill="#1A56DB"/>
+                    <text class="kgraph-label" x="80" y="73">Transformer</text>
+                    <circle class="kgraph-node" cx="190" cy="25" r="10" fill="#7C3AED"/>
+                    <text class="kgraph-label" x="190" y="50">BERT</text>
+                    <circle class="kgraph-node" cx="190" cy="65" r="10" fill="#059669"/>
+                    <text class="kgraph-label" x="190" y="90">GPT</text>
+                    <circle class="kgraph-node" cx="310" cy="45" r="12" fill="#F59E0B"/>
+                    <text class="kgraph-label" x="310" y="72">Attention</text>
+                    <circle class="kgraph-node" cx="430" cy="25" r="9" fill="#DC2626"/>
+                    <text class="kgraph-label" x="430" y="48">ViT</text>
+                    <circle class="kgraph-node" cx="430" cy="65" r="9" fill="#8B5CF6"/>
+                    <text class="kgraph-label" x="430" y="88">Mamba</text>
+                    <circle class="kgraph-node" cx="530" cy="45" r="8" fill="#6366F1"/>
+                    <text class="kgraph-label" x="530" y="70">LLaMA</text>
+                  </svg>
+                  <p style="font-size:11px;color:var(--text-light);margin-top:4px;">自动提取论文中的关键实体和引用关系，构建可交互的知识图谱。节点大小表示影响力，连线粗细表示关联强度。</p>
+                </div>
+              </div>
+
+              <div class="v3-mockup">
+                <div class="v3-mockup-header">&#9889; AI自动文献综述生成</div>
+                <div class="v3-mockup-body">
+                  <div class="progress-mockup">
+                    <div class="progress-mockup-row">
+                      <span class="pm-label">文献检索</span>
+                      <div class="pm-bar"><div class="pm-fill" style="width:100%;background:var(--brand-green);"></div></div>
+                      <span class="pm-pct">100%</span>
+                    </div>
+                    <div class="progress-mockup-row">
+                      <span class="pm-label">内容分析</span>
+                      <div class="pm-bar"><div class="pm-fill" style="width:100%;background:var(--brand-green);"></div></div>
+                      <span class="pm-pct">100%</span>
+                    </div>
+                    <div class="progress-mockup-row">
+                      <span class="pm-label">大纲生成</span>
+                      <div class="pm-bar"><div class="pm-fill" style="width:100%;background:var(--brand-green);"></div></div>
+                      <span class="pm-pct">100%</span>
+                    </div>
+                    <div class="progress-mockup-row">
+                      <span class="pm-label">正文撰写</span>
+                      <div class="pm-bar"><div class="pm-fill" style="width:68%;background:var(--brand-blue);"></div></div>
+                      <span class="pm-pct">68%</span>
+                    </div>
+                    <div class="progress-mockup-row">
+                      <span class="pm-label">格式检查</span>
+                      <div class="pm-bar"><div class="pm-fill" style="width:0%;background:var(--text-light);"></div></div>
+                      <span class="pm-pct">0%</span>
+                    </div>
+                  </div>
+                  <p style="font-size:11px;color:var(--text-light);margin-top:4px;">基于文献库中128篇论文自动生成综述，当前进度 68%，预估剩余时间 12 分钟。</p>
+                </div>
+              </div>
+
+              <div class="v3-mockup">
+                <div class="v3-mockup-header">&#128260; 多语言论文翻译对比</div>
+                <div class="v3-mockup-body">
+                  <div class="trans-mockup">
+                    <div class="trans-col trans-en">
+                      <div class="trans-label">English (Original)</div>
+                      The Transformer architecture, introduced by Vaswani et al. in 2017, has revolutionized natural language processing. Its core innovation, the self-attention mechanism, enables parallel computation of sequence dependencies.
+                    </div>
+                    <div class="trans-col trans-zh">
+                      <div class="trans-label">中文翻译</div>
+                      Transformer架构由Vaswani等人于2017年提出，彻底革新了自然语言处理领域。其核心创新——自注意力机制——实现了序列依赖关系的并行计算。
+                    </div>
+                  </div>
+                  <div class="trans-mockup" style="margin-top:4px;">
+                    <div class="trans-col trans-en">
+                      <div class="trans-label">日本語</div>
+                      Vaswaniらが2017年に提唱したTransformerアーキテクチャは、自然言語処理に革命をもたらしました。
+                    </div>
+                    <div class="trans-col trans-zh" style="background:#FFF7ED;">
+                      <div class="trans-label">한국어</div>
+                      2017년 Vaswani 등이 소개한 Transformer 아키텍처는 자연어 처리 분야에 혁명을 일으켰습니다.
+                    </div>
+                  </div>
+                  <p style="font-size:11px;color:var(--text-light);margin-top:4px;">支持中、英、日、韩、法、德等12种语言的论文全文实时翻译与并排对照。</p>
+                </div>
+              </div>
+
+              <ul style="margin-top:8px;">
+                <li>多模态论文搜索（支持图像/表格/公式检索）</li>
+                <li>智能审稿人推荐 + 审稿意见模拟</li>
+                <li>论文影响力预测（引用量/Altmetric Score预测模型）</li>
+                <li>实验室协作空间（共享文献库 + 注释 + 讨论）</li>
+                <li>LaTeX在线协作编辑 + 模板市场</li>
+                <li>学术社交媒体集成（Twitter/ResearchGate/Google Scholar同步）</li>
+                <li>深度个性化推荐引擎（基于用户阅读历史和兴趣图谱）</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 外部脚本 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4/build/pdf.min.js"></script>
+    <script src="js/app.js" defer></script>
+  </body>
+</html>

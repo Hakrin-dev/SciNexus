@@ -1,0 +1,19 @@
+{
+  "name": "yanshu",
+  "version": "1.0.0",
+  "description": "研枢 - AI驱动科研全链路辅助平台",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "python server/main.py",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "install:server": "pip install -r server/requirements.txt"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "vite": "^5.0.0"
+  }
+}

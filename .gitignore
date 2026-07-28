@@ -1,0 +1,105 @@
+# ===== 依赖 =====
+node_modules/
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# ===== Python 虚拟环境 =====
+venv/
+.venv/
+env/
+.python-version
+
+# ===== 环境变量（仅忽略含敏感信息的本地文件） =====
+.env
+.env.local
+.env.*.local
+.env.development
+# 注意：.env.example 不被忽略，需提交到仓库作为配置参考
+
+# ===== Vite / 前端构建产物 =====
+dist/
+.vite/
+*.local
+
+# ===== 包管理器 =====
+.pnpm-store/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+*.tsbuildinfo
+.eslintcache
+
+# ===== 数据库 / 数据文件 =====
+*.db
+*.sqlite
+*.sqlite3
+*.duckdb
+
+# ===== 上传 / 用户数据 =====
+uploads/
+server/uploads/
+server/static/uploads/
+
+# ===== 操作系统 =====
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ===== IDE / 编辑器 =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.code-workspace
+
+# ===== 日志 =====
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== 临时文件 =====
+*.tmp
+*.temp
+*.cache
+.cache/
+*.bak
+*.orig
+
+# ===== 测试覆盖率 =====
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ===== Python 类型检查 / Lint =====
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# ===== AI / 工具缓存 =====
+.claude/
+.codex/
+.cursor/
+.copilot/
+
+# ===== Storybook =====
+storybook-static/
+
+# ===== Docker =====
+docker-compose.override.yml

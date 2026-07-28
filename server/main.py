@@ -1,0 +1,710 @@
+"""
+研枢 YanShu — 后端 API 服务
+@file        main.py
+@version     3.0.0
+@description 基于 FastAPI 的研枢科研平台后端服务，提供论文检索、AI对话、期刊管理、文献库、统计等 RESTful API。包含请求限流、全局异常处理、健康检查等生产级特性。
+"""
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import time
+import random
+import asyncio
+import logging
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, JSONResponse
+from pydantic import BaseModel
+from typing import Optional, AsyncGenerator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from server.data.mock_data import (
+    PAPERS, JOURNALS, CONVERSATIONS, LIBRARY_PAPERS,
+    NOTIFICATIONS, TREND_DATA, FAVORITES_CACHE
+)
+
+START_TIME = time.time()
+
+app = FastAPI(
+    title="研枢 YanShu API",
+    description="AI驱动科研全链路辅助平台后端服务",
+    version="1.0.0"
+)
+
+# ==================== CORS 跨域配置 ====================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ==================== 日志配置 ====================
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+logger = logging.getLogger(__name__)
+
+# ==================== 请求限流器 ====================
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ==================== 全局异常处理 ====================
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """全局未捕获异常处理器，记录错误日志并返回统一格式的 500 响应"""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal Server Error", "detail": str(exc), "path": str(request.url)}
+    )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """HTTP 异常处理器，将 FastAPI HTTPException 转为统一 JSON 格式"""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail, "status_code": exc.status_code}
+    )
+
+# ==================== 健康检查 ====================
+@app.get("/api/health")
+def health_check():
+    """服务健康检查：返回服务状态、版本、运行时间等基本信息"""
+    return {
+        "status": "healthy",
+        "service": "研枢 YanShu API",
+        "version": "1.0.0",
+        "timestamp": time.time(),
+        "uptime": time.time() - START_TIME
+    }
+
+@app.get("/api/health/detailed")
+def detailed_health():
+    """详细健康检查：除基本信息外，附加各数据集的条目数量"""
+    return {
+        "status": "healthy",
+        "service": "研枢 YanShu API",
+        "version": "1.0.0",
+        "papers_count": len(PAPERS),
+        "journals_count": len(JOURNALS),
+        "conversations_count": len(CONVERSATIONS),
+        "library_count": len(LIBRARY_PAPERS),
+        "timestamp": time.time()
+    }
+
+# ==================== 请求/响应模型 ====================
+class SearchRequest(BaseModel):
+    """论文搜索请求"""
+    query: str                              # 搜索关键词
+    mode: Optional[str] = "keyword"         # 搜索模式：keyword（关键词）或 semantic（语义）
+    ccf: Optional[str] = None               # CCF 级别筛选：A / B / C
+    year_from: Optional[int] = None         # 发表年份下限
+    year_to: Optional[int] = None           # 发表年份上限
+    sort_by: Optional[str] = "relevance"    # 排序依据：relevance / citations / date
+
+class ChatRequest(BaseModel):
+    """AI 对话请求"""
+    conversation_id: Optional[str] = None   # 对话ID，为空时创建新对话
+    message: str                            # 用户消息内容
+
+class SubmissionMatchRequest(BaseModel):
+    """投稿匹配请求"""
+    title: str                              # 论文标题
+    abstract: str                           # 论文摘要
+    keywords: Optional[list[str]] = None    # 论文关键词列表
+
+class LibraryAddRequest(BaseModel):
+    """添加到文献库请求"""
+    paper_id: str                           # 论文唯一标识
+    folder: Optional[str] = "默认"          # 所属文件夹
+    tags: Optional[list[str]] = None        # 标签列表
+
+class FavRequest(BaseModel):
+    """收藏请求"""
+    paper_id: str                           # 论文唯一标识
+    folder: Optional[str] = "默认"          # 所属文件夹
+    tags: Optional[list[str]] = None        # 标签列表
+
+# ==================== 根路径 ====================
+@app.get("/")
+def root():
+    """API 根路径：返回服务信息和可用端点列表"""
+    return {
+        "service": "研枢 YanShu API",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "endpoints": {
+            "papers": "/api/papers",
+            "search": "/api/search",
+            "chat": "/api/chat",
+            "chat_stream": "/api/chat/stream",
+            "journals": "/api/journals",
+            "library": "/api/library",
+            "notifications": "/api/notifications"
+        }
+    }
+
+# ==================== 论文搜索 ====================
+@app.get("/api/papers")
+def get_papers(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    sort_by: str = Query("relevance"),
+    ccf: Optional[str] = None,
+    year: Optional[int] = None,
+    keyword: Optional[str] = None,
+):
+    """
+    获取论文列表（支持分页、筛选、排序）
+    :param page:       页码（从1开始）
+    :param page_size:  每页条数（1-50）
+    :param sort_by:    排序方式：relevance（相关度） / citations（引用数） / date（日期）
+    :param ccf:        CCF 级别筛选
+    :param year:       发表年份筛选
+    :param keyword:    标题/摘要/关键词模糊搜索
+    :return:           分页后的论文列表及分页元信息
+    """
+    result = list(PAPERS)
+
+    # 按 CCF 级别筛选
+    if ccf and ccf != "all":
+        result = [p for p in result if p["ccf"] == ccf]
+    # 按年份筛选
+    if year:
+        result = [p for p in result if p["year"] == year]
+    # 按关键词模糊搜索
+    if keyword:
+        kw = keyword.lower()
+        result = [p for p in result if
+            kw in p["title"].lower() or
+            kw in p["abstract"].lower() or
+            any(kw in k for k in p["keywords"])]
+
+    # 排序逻辑
+    if sort_by == "citations":
+        result.sort(key=lambda p: int(p["citations"].replace(",","").replace("+","")), reverse=True)
+    elif sort_by == "date":
+        result.sort(key=lambda p: p["year"], reverse=True)
+    else:
+        # 相关度排序：完美匹配优先
+        result.sort(key=lambda p: p["match"] == "perfect", reverse=True)
+
+    total = len(result)
+    start = (page - 1) * page_size
+    end = start + page_size
+    return {
+        "data": result[start:end],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size
+    }
+
+@app.get("/api/papers/recommended")
+def get_recommended(limit: int = Query(9, ge=1, le=20)):
+    """
+    获取每日推荐论文
+    :param limit: 返回条数上限（1-20）
+    :return:      按引用量排序的前 N 篇论文
+    """
+    result = sorted(PAPERS, key=lambda p: int(p["citations"].replace(",","").replace("+","")), reverse=True)[:limit]
+    return {"data": result, "updated": "2026-07-23"}
+
+@app.get("/api/papers/{paper_id}")
+def get_paper_detail(paper_id: str):
+    """
+    根据论文 ID 获取论文详情
+    :param paper_id: 论文唯一标识
+    :return:        论文完整数据
+    :raises HTTPException 404: 论文不存在
+    """
+    for p in PAPERS:
+        if p["id"] == paper_id:
+            return {"data": p}
+    raise HTTPException(status_code=404, detail="论文未找到")
+
+# ==================== 语义搜索 ====================
+@app.post("/api/search")
+@limiter.limit("10/minute")
+async def search_endpoint(req: SearchRequest, request: Request):
+    """
+    AI 语义搜索接口（限流：10次/分钟）
+    流程：意图分解 -> 候选召回 -> 逐篇验证
+    :param req:     搜索请求体
+    :param request: FastAPI Request 对象（限流器需要）
+    :return:        语义搜索结果及搜索元信息
+    """
+    logger.info(f"Search: query='{req.query}', mode={req.mode}")
+    return _search_papers_impl(req)
+
+def _search_papers_impl(req: SearchRequest):
+    """
+    语义搜索核心实现：
+    1. 意图分解：将用户查询拆分为多个子查询
+    2. 候选召回：基于关键词匹配从论文库中召回候选集
+    3. 逐篇验证：为每篇候选论文计算匹配度分数
+    """
+    start_time = time.time()
+
+    # 步骤一：意图分解
+    sub_queries = _decompose_intent(req.query)
+    checklist = _generate_checklist(req.query)
+
+    # 步骤二：候选召回
+    candidates = []
+    for sq in sub_queries:
+        for p in PAPERS:
+            if any(kw.lower() in p["title"].lower() or kw.lower() in p["abstract"].lower()
+                   for kw in sq["keywords"]):
+                if p["id"] not in [c["id"] for c in candidates]:
+                    candidates.append({**p, "match_reason": f"关键词匹配: {', '.join(sq['keywords'])}"})
+    candidates = candidates[:20]
+
+    # 步骤三：逐篇验证（模拟评分）
+    for c in candidates:
+        c["checklist_score"] = random.randint(60, 100)
+        c["match"] = "perfect" if c["checklist_score"] >= 90 else \
+                     "partial" if c["checklist_score"] >= 70 else "weak"
+        c["matchLabel"] = "Perfect" if c["match"] == "perfect" else \
+                          "Partial" if c["match"] == "partial" else "Weak"
+
+    # 按匹配度降序排列
+    candidates.sort(key=lambda c: c["checklist_score"], reverse=True)
+    elapsed = round(time.time() - start_time, 2)
+
+    return {
+        "data": candidates,
+        "meta": {
+            "query": req.query,
+            "sub_queries": sub_queries,
+            "checklist": checklist,
+            "candidates_count": len(candidates),
+            "search_time": elapsed,
+            "mode": req.mode
+        }
+    }
+
+# ==================== AI 对话 ====================
+@app.get("/api/conversations")
+def list_conversations():
+    """获取全部对话历史列表（仅返回 id、标题和预览）"""
+    result = [{"id": c["id"], "title": c["title"], "preview": c["preview"]} for c in CONVERSATIONS]
+    return {"data": result}
+
+@app.get("/api/conversations/{conv_id}")
+def get_conversation(conv_id: str):
+    """
+    获取指定对话的完整详情
+    :param conv_id: 对话唯一标识
+    :return:        对话的完整数据
+    :raises HTTPException 404: 对话不存在
+    """
+    for c in CONVERSATIONS:
+        if c["id"] == conv_id:
+            return {"data": c}
+    raise HTTPException(status_code=404, detail="对话未找到")
+
+def _generate_chat_reply(message: str) -> str:
+    """
+    根据用户消息生成 AI 对话回复（供普通接口和流式接口共用）
+    :param message: 用户输入的消息
+    :return:        生成的 AI 回复文本
+    """
+    msg_lower = message.lower()
+
+    if "综述" in message:
+        reply = f"好的！我将为您撰写关于「{message.replace('帮我写','').replace('的','').replace('综述','').strip()}」的文献综述。\n\n**综述大纲**\n1. 研究背景\n2. 核心技术\n3. 代表性工作\n4. 对比分析\n5. 未来展望\n\n正在生成…"
+    elif "推荐" in message or "找" in message:
+        reply = "为您检索到以下相关论文：\n\n1. **Attention Is All You Need** (Vaswani et al., NeurIPS 2017) — 引用98,700+\n2. **BERT** (Devlin et al., NAACL 2019) — 引用65,200+\n3. **GPT-3** (Brown et al., NeurIPS 2020) — 引用42,500+\n\n点击论文标题可查看详情。"
+    elif "润色" in message or "修改" in message:
+        reply = "好的，请将需要润色的段落粘贴到对话中，我将从语法、流畅度、学术风格三个方面进行优化。"
+    elif "对比" in message or "比较" in message:
+        reply = "好的，我来为您做对比分析。请告诉我需要对比哪些方法或模型？"
+    elif "投稿" in message or "会议" in message:
+        reply = "根据您的研究方向，我推荐以下会议：\n1. ACL（顶会） - 匹配度 88%\n2. EMNLP - 匹配度 76%\n3. NeurIPS - 匹配度 85%\n\n建议优先考虑ACL，详细投稿策略请切换到投稿分析页面查看。"
+    else:
+        replies = [
+            "这是一个很好的问题！让我从学术角度为您分析…",
+            "根据相关文献，这个研究方向的最新进展是…",
+            f"关于「{message}」，我检索到相关论文{random.randint(3,8)}篇，为您整理如下…",
+            "让我想想… 从方法论角度，这个问题可以从以下几个方面展开…",
+        ]
+        reply = random.choice(replies)
+
+    return reply
+
+@app.post("/api/chat")
+@limiter.limit("30/minute")
+async def chat_endpoint(req: ChatRequest, request: Request):
+    """
+    AI 对话（一次性返回完整回复，限流：30次/分钟）
+    :param req:     对话请求体
+    :param request: FastAPI Request 对象（限流器需要）
+    :return:        AI 回复内容、对话 ID 和 token 数量
+    """
+    logger.info(f"Chat: conv={req.conversation_id}, msg_len={len(req.message)}")
+    return _chat_impl(req)
+
+def _chat_impl(req: ChatRequest):
+    """AI 对话核心实现：生成回复并一次性返回"""
+    reply = _generate_chat_reply(req.message)
+
+    return {
+        "reply": reply,
+        "conversation_id": req.conversation_id or "new",
+        "tokens": len(reply)
+    }
+
+@app.post("/api/chat/stream")
+async def chat_stream(req: ChatRequest):
+    """
+    AI 对话流式接口（SSE 逐字发送回复，模拟打字效果）
+    :param req: 对话请求体
+    :return:    SSE 流式响应，包含 meta 事件、逐字 data 事件和 done 终止事件
+    """
+    reply = _generate_chat_reply(req.message)
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        # 先发送对话元信息
+        conv_id = req.conversation_id or "new"
+        yield f"event: meta\ndata: {{\"conversation_id\": \"{conv_id}\", \"tokens\": {len(reply)}}}\n\n"
+
+        # 逐字发送回复内容，每次间隔 0.03-0.06 秒
+        for char in reply:
+            escaped = char.replace("\n", "\\n")
+            yield f"data: {escaped}\n\n"
+            delay = random.uniform(0.03, 0.06)
+            await asyncio.sleep(delay)
+
+        # 发送流结束信号
+        yield "event: done\ndata: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+# ==================== 投稿分析 ====================
+@app.get("/api/journals")
+def get_journals(sort_by: str = Query("match")):
+    """
+    获取期刊/会议列表
+    :param sort_by: 排序方式：match（匹配度） / rate（录用率） / deadline（截稿日期）
+    :return:        排序后的期刊列表
+    """
+    result = list(JOURNALS)
+    if sort_by == "rate":
+        result.sort(key=lambda j: j["rate"], reverse=True)
+    elif sort_by == "deadline":
+        result.sort(key=lambda j: j["deadline"])
+    else:
+        result.sort(key=lambda j: j["matchPct"], reverse=True)
+    return {"data": result}
+
+@app.post("/api/submission/match")
+def submit_match(req: SubmissionMatchRequest):
+    """
+    投稿方向匹配：根据论文标题和摘要，为每条期刊/会议计算匹配分数和理由
+    :param req: 投稿匹配请求体
+    :return:    匹配度最高的前5个期刊/会议
+    """
+    matched = []
+    for j in JOURNALS:
+        score = random.randint(50, 95)
+        matched.append({**j, "matchPct": score,
+            "matchClass": "high" if score >= 80 else "mid" if score >= 60 else "low",
+            "matchReason": f"研究方向与{j['domain']}领域高度相关"
+        })
+    matched.sort(key=lambda j: j["matchPct"], reverse=True)
+    return {
+        "data": matched[:5],
+        "input": {"title": req.title, "keywords": req.keywords}
+    }
+
+@app.get("/api/trends")
+def get_trends():
+    """获取投稿趋势数据（各会议近5年录用率等）"""
+    return {"data": TREND_DATA}
+
+# ==================== 个人文献库 ====================
+@app.get("/api/library")
+def get_library(
+    folder: Optional[str] = None,
+    tag: Optional[str] = None,
+    status: Optional[str] = None,
+    sort_by: str = Query("collected"),
+):
+    """
+    获取个人文献库列表（支持文件夹、标签、阅读状态筛选）
+    :param folder:  文件夹名称筛选
+    :param tag:     标签筛选
+    :param status:  阅读状态筛选：read / reading / unread
+    :param sort_by: 排序方式
+    :return:        筛选后的文献列表及阅读统计
+    """
+    result = list(LIBRARY_PAPERS)
+
+    if folder and folder != "all":
+        result = [p for p in result if p["folder"] == folder]
+    if tag:
+        result = [p for p in result if tag in p["tags"]]
+    if status:
+        result = [p for p in result if p["status"] == status]
+
+    result.sort(key=lambda p: p["collected"], reverse=True)
+
+    return {
+        "data": result,
+        "total": len(LIBRARY_PAPERS),
+        "stats": {
+            "read": sum(1 for p in LIBRARY_PAPERS if p["status"] == "read"),
+            "reading": sum(1 for p in LIBRARY_PAPERS if p["status"] == "reading"),
+            "unread": sum(1 for p in LIBRARY_PAPERS if p["status"] == "unread"),
+        }
+    }
+
+@app.post("/api/library")
+async def add_to_library_endpoint(req: LibraryAddRequest):
+    """
+    添加论文到个人文献库（含输入校验和去重检查）
+    :param req: 文献库添加请求体
+    :return:    操作结果
+    """
+    if not req.paper_id or len(req.paper_id) < 2:
+        raise HTTPException(status_code=400, detail="无效的论文ID")
+    if req.folder and len(req.folder) > 100:
+        raise HTTPException(status_code=400, detail="文件夹名称过长")
+    logger.info(f"Library add: paper={req.paper_id}, folder={req.folder}")
+    return _add_to_library_impl(req)
+
+def _add_to_library_impl(req: LibraryAddRequest):
+    """添加论文到文献库的核心实现：查找论文、去重检查、写入文献库"""
+    # 查找目标论文
+    paper = None
+    for p in PAPERS:
+        if p["id"] == req.paper_id:
+            paper = p
+            break
+    if not paper:
+        raise HTTPException(status_code=404, detail="论文未找到")
+
+    # 检查是否已存在（去重）
+    for lp in LIBRARY_PAPERS:
+        if lp["pid"] == req.paper_id:
+            return {"message": "论文已在文献库中", "id": lp["id"]}
+
+    new_id = f"lp{len(LIBRARY_PAPERS)+1}"
+    LIBRARY_PAPERS.append({
+        "id": new_id, "pid": paper["id"],
+        "title": paper["title"], "authors": paper["authors"],
+        "venue": paper["venue"], "ccf": paper["ccf"],
+        "status": "unread", "readingProgress": 0,
+        "tags": req.tags or [], "folder": req.folder or "默认",
+        "collected": "2026-07-23"
+    })
+    return {"message": "收藏成功", "id": new_id}
+
+@app.delete("/api/library/{paper_id}")
+def remove_from_library(paper_id: str):
+    """
+    从文献库中删除指定论文
+    :param paper_id: 文献库中的记录 ID
+    :return:         操作结果
+    :raises HTTPException 404: 文献库中不存在该记录
+    """
+    global LIBRARY_PAPERS
+    before = len(LIBRARY_PAPERS)
+    LIBRARY_PAPERS = [p for p in LIBRARY_PAPERS if p["id"] != paper_id]
+    if len(LIBRARY_PAPERS) == before:
+        raise HTTPException(status_code=404, detail="文献库中未找到该论文")
+    return {"message": "已删除"}
+
+@app.post("/api/library/batch-delete")
+async def batch_delete_library(ids: list[str]):
+    """
+    批量删除文献库记录
+    :param ids: 要删除的记录 ID 列表
+    :return:    删除结果及删除数量
+    """
+    global LIBRARY_PAPERS
+    before = len(LIBRARY_PAPERS)
+    LIBRARY_PAPERS = [p for p in LIBRARY_PAPERS if p["id"] not in ids]
+    removed = before - len(LIBRARY_PAPERS)
+    logger.info(f"Batch delete: removed {removed} papers")
+    return {"message": f"已删除 {removed} 篇文献", "removed": removed}
+
+@app.put("/api/library/{paper_id}/progress")
+def update_reading_progress(paper_id: str, progress: int = 0):
+    """
+    更新论文阅读进度，并根据进度自动调整阅读状态
+    :param paper_id: 文献库记录 ID
+    :param progress: 阅读进度百分比（0-100）
+    :return:         更新结果
+    :raises HTTPException 404: 记录不存在
+    """
+    for p in LIBRARY_PAPERS:
+        if p["id"] == paper_id:
+            p["readingProgress"] = progress
+            if progress >= 100:
+                p["status"] = "read"
+            elif progress > 0:
+                p["status"] = "reading"
+            return {"message": "已更新", "progress": progress}
+    raise HTTPException(status_code=404, detail="未找到")
+
+# ==================== 通知管理 ====================
+@app.get("/api/notifications")
+def get_notifications():
+    """获取全部通知列表及未读数量"""
+    unread = sum(1 for n in NOTIFICATIONS if not n["read"])
+    return {"data": NOTIFICATIONS, "unread_count": unread}
+
+@app.put("/api/notifications/{notif_id}/read")
+def mark_notification_read(notif_id: str):
+    """
+    将指定通知标记为已读
+    :param notif_id: 通知唯一标识
+    :return:         操作结果
+    :raises HTTPException 404: 通知不存在
+    """
+    for n in NOTIFICATIONS:
+        if n["id"] == notif_id:
+            n["read"] = True
+            return {"message": "已标记为已读"}
+    raise HTTPException(status_code=404, detail="通知未找到")
+
+# ==================== 收藏管理 ====================
+@app.get("/api/favorites")
+def get_favorites():
+    """获取全部收藏列表及数量"""
+    return {"data": FAVORITES_CACHE, "count": len(FAVORITES_CACHE)}
+
+@app.post("/api/favorites")
+def add_favorite(req: FavRequest):
+    """
+    添加论文到收藏夹
+    :param req: 收藏请求体
+    :return:    操作结果
+    :raises HTTPException 404: 论文不存在
+    """
+    for p in PAPERS:
+        if p["id"] == req.paper_id:
+            FAVORITES_CACHE.append({
+                "paper_id": req.paper_id,
+                "title": p["title"],
+                "folder": req.folder or "默认",
+                "tags": req.tags or [],
+                "added_at": "2026-07-23"
+            })
+            return {"message": "收藏成功", "total": len(FAVORITES_CACHE)}
+    raise HTTPException(status_code=404, detail="论文未找到")
+
+@app.delete("/api/favorites/{paper_id}")
+def remove_favorite(paper_id: str):
+    """
+    取消指定论文的收藏
+    :param paper_id: 论文唯一标识
+    :return:         操作结果
+    """
+    global FAVORITES_CACHE
+    FAVORITES_CACHE = [f for f in FAVORITES_CACHE if f["paper_id"] != paper_id]
+    return {"message": "已取消收藏"}
+
+# ==================== 平台统计 ====================
+@app.get("/api/stats")
+def get_stats():
+    """获取平台概览统计数据（今日更新、活跃用户、综述撰写、截稿提醒）"""
+    return {
+        "data": {
+            "papers_today": 128,
+            "active_users": 3286,
+            "reviews_writing": 47,
+            "deadline_alerts": 5
+        }
+    }
+
+@app.get("/api/stats/detailed")
+def detailed_stats():
+    """获取详细统计数据：论文CCF分布、文献库阅读状态分布等"""
+    papers_by_ccf = {"A": 0, "B": 0, "C": 0, "预印本": 0}
+    for p in PAPERS:
+        ccf = p.get("ccf", "未知")
+        papers_by_ccf[ccf] = papers_by_ccf.get(ccf, 0) + 1
+
+    lib_status = {"read": 0, "reading": 0, "unread": 0}
+    for p in LIBRARY_PAPERS:
+        lib_status[p["status"]] = lib_status.get(p["status"], 0) + 1
+
+    return {
+        "papers": {"total": len(PAPERS), "by_ccf": papers_by_ccf},
+        "journals": {"total": len(JOURNALS)},
+        "library": {"total": len(LIBRARY_PAPERS), "by_status": lib_status},
+        "conversations": {"total": len(CONVERSATIONS)},
+        "notifications": {"total": len(NOTIFICATIONS), "unread": sum(1 for n in NOTIFICATIONS if not n["read"])}
+    }
+
+# ==================== 辅助函数 ====================
+def _decompose_intent(query: str):
+    """
+    意图分解：将用户查询拆分为多个子查询，每个子查询包含意图标签和关键词
+    :param query: 用户原始查询文本
+    :return:      子查询列表，每个元素含 intent 和 keywords
+    """
+    keywords_map = {
+        "大语言模型": ["llm", "language model", "pre-trained"],
+        "推理优化": ["inference", "optimization", "efficient"],
+        "transformer": ["transformer", "attention", "self-attention"],
+        "注意力": ["attention", "self-attention", "multi-head"],
+        "综述": ["survey", "review", "comprehensive"],
+        "检索增强": ["rag", "retrieval", "augmented"],
+        "图神经网络": ["gnn", "graph", "neural"],
+        "对比学习": ["contrastive", "self-supervised", "simclr"],
+        "联邦学习": ["federated", "edge", "privacy"],
+        "扩散模型": ["diffusion", "generative", "ddpm"],
+        "微调": ["fine-tuning", "lora", "adaptation"],
+        "推荐": ["recommendation", "recommender"],
+    }
+
+    query_lower = query.lower()
+    sub_queries = []
+    for key, kws in keywords_map.items():
+        if key in query_lower:
+            sub_queries.append({"intent": key, "keywords": kws})
+
+    if not sub_queries:
+        sub_queries.append({"intent": "通用检索", "keywords": [w for w in query.split() if len(w) > 2]})
+
+    return sub_queries[:5]
+
+def _generate_checklist(query: str):
+    """
+    生成论文验证清单，用于评估检索结果的质量
+    :param query: 用户查询文本
+    :return:      验证问题列表
+    """
+    return [
+        "是否与查询主题高度相关？",
+        "是否发表于CCF推荐的顶级会议/期刊？",
+        "方法论是否经过严格实验验证？",
+        "是否有足够的引用量支撑影响力？",
+        "是否涵盖最新的研究进展（2023年后）？",
+    ]
+
+# ==================== 启动入口 ====================
+if __name__ == "__main__":
+    import uvicorn
+    logger.info("=" * 50)
+    logger.info("  研枢 YanShu API Server Starting...")
+    logger.info(f"  Papers loaded: {len(PAPERS)}")
+    logger.info(f"  Journals loaded: {len(JOURNALS)}")
+    logger.info(f"  Conversations loaded: {len(CONVERSATIONS)}")
+    logger.info("=" * 50)
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
