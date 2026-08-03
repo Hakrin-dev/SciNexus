@@ -103,3 +103,5 @@ storybook-static/
 
 # ===== Docker =====
 docker-compose.override.yml
+# Runtime cache
+data/cache/
