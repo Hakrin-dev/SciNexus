@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ==================== 前端：测试 + 构建 ====================
+  frontend:
+    name: Frontend (Vitest + Build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true # lint 不阻断流程（项目无 lint 错误时移除）
+
+      - name: Run Vitest
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+  # ==================== 后端：测试 ====================
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    env:
+      DEEPSEEK_API_KEY: test-key-for-ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r server/requirements.txt pytest httpx
+
+      - name: Run pytest
+        run: pytest tests/ -v

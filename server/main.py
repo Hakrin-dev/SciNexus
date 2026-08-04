@@ -8,10 +8,18 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# 加载 .env 环境变量文件（若存在）—— 用于本地开发，生产环境由系统环境变量注入
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+except ImportError:
+    pass  # python-dotenv 未安装时回退到纯系统环境变量
+
 import time
 import random
 import asyncio
 import logging
+import httpx
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -24,6 +32,14 @@ from server.data.mock_data import (
     PAPERS, JOURNALS, CONVERSATIONS, LIBRARY_PAPERS,
     NOTIFICATIONS, TREND_DATA, FAVORITES_CACHE
 )
+
+# ==================== DeepSeek API 配置（从环境变量读取，避免硬编码泄露） ====================
+DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
+DEEPSEEK_API_URL = os.environ.get('DEEPSEEK_API_URL', 'https://api.deepseek.com/v1/chat/completions')
+DEEPSEEK_MODEL = os.environ.get('DEEPSEEK_MODEL', 'deepseek-chat')
+if not DEEPSEEK_API_KEY:
+    import warnings
+    warnings.warn('未配置 DEEPSEEK_API_KEY 环境变量，AI 对话接口将不可用。请在 .env 文件中设置该变量。')
 
 START_TIME = time.time()
 
@@ -106,9 +122,9 @@ class SearchRequest(BaseModel):
     sort_by: Optional[str] = "relevance"    # 排序依据：relevance / citations / date
 
 class ChatRequest(BaseModel):
-    """AI 对话请求"""
+    """AI 对话请求（DeepSeek 代理）"""
+    messages: list                          # 消息列表 [{role, content}, ...]
     conversation_id: Optional[str] = None   # 对话ID，为空时创建新对话
-    message: str                            # 用户消息内容
 
 class SubmissionMatchRequest(BaseModel):
     """投稿匹配请求"""
@@ -340,18 +356,36 @@ def _generate_chat_reply(message: str) -> str:
 @limiter.limit("30/minute")
 async def chat_endpoint(req: ChatRequest, request: Request):
     """
-    AI 对话（一次性返回完整回复，限流：30次/分钟）
-    :param req:     对话请求体
+    AI 对话（DeepSeek 非流式代理，限流：30次/分钟）
+    :param req:     对话请求体（messages 列表）
     :param request: FastAPI Request 对象（限流器需要）
     :return:        AI 回复内容、对话 ID 和 token 数量
     """
-    logger.info(f"Chat: conv={req.conversation_id}, msg_len={len(req.message)}")
-    return _chat_impl(req)
+    logger.info(f"Chat: conv={req.conversation_id}, msgs={len(req.messages)}")
+    payload = {
+        "model": DEEPSEEK_MODEL,
+        "messages": req.messages,
+        "stream": False
+    }
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(DEEPSEEK_API_URL, json=payload, headers=headers, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+    reply = data["choices"][0]["message"]["content"]
+    return {
+        "reply": reply,
+        "conversation_id": req.conversation_id or "new",
+        "tokens": len(reply)
+    }
 
 def _chat_impl(req: ChatRequest):
-    """AI 对话核心实现：生成回复并一次性返回"""
-    reply = _generate_chat_reply(req.message)
-
+    """AI 对话核心实现：生成回复并一次性返回（备用本地实现）"""
+    message = req.messages[-1]["content"] if req.messages else ""
+    reply = _generate_chat_reply(message)
     return {
         "reply": reply,
         "conversation_id": req.conversation_id or "new",
@@ -359,28 +393,31 @@ def _chat_impl(req: ChatRequest):
     }
 
 @app.post("/api/chat/stream")
-async def chat_stream(req: ChatRequest):
+@limiter.limit("30/minute")
+async def chat_stream(req: ChatRequest, request: Request):
     """
-    AI 对话流式接口（SSE 逐字发送回复，模拟打字效果）
-    :param req: 对话请求体
-    :return:    SSE 流式响应，包含 meta 事件、逐字 data 事件和 done 终止事件
+    AI 对话流式接口（DeepSeek SSE 代理，限流：30次/分钟）
+    :param req:     对话请求体（messages 列表）
+    :param request: FastAPI Request 对象（限流器需要）
+    :return:        SSE 流式响应，逐行转发 DeepSeek 的 SSE 数据
     """
-    reply = _generate_chat_reply(req.message)
+    payload = {
+        "model": DEEPSEEK_MODEL,
+        "messages": req.messages,
+        "stream": True
+    }
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
     async def event_generator() -> AsyncGenerator[str, None]:
-        # 先发送对话元信息
-        conv_id = req.conversation_id or "new"
-        yield f"event: meta\ndata: {{\"conversation_id\": \"{conv_id}\", \"tokens\": {len(reply)}}}\n\n"
-
-        # 逐字发送回复内容，每次间隔 0.03-0.06 秒
-        for char in reply:
-            escaped = char.replace("\n", "\\n")
-            yield f"data: {escaped}\n\n"
-            delay = random.uniform(0.03, 0.06)
-            await asyncio.sleep(delay)
-
-        # 发送流结束信号
-        yield "event: done\ndata: [DONE]\n\n"
+        async with httpx.AsyncClient() as client:
+            async with client.stream("POST", DEEPSEEK_API_URL, json=payload, headers=headers, timeout=60) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if line:
+                        yield f"{line}\n\n"
 
     return StreamingResponse(
         event_generator(),

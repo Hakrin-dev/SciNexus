@@ -1,0 +1,1499 @@
+/**
+ * submission.css — 投稿分析页样式
+ * V1/V2 布局、期刊卡片、投稿 AI 对话、趋势图表、引用图谱、
+ * 词云、详情趋势、筛选器、日历弹窗、期刊详情弹窗。
+ */
+
+
+/* =================================================================
+ * 十一、投稿分析页
+ * ================================================================= */
+
+/* ========== V1 布局 ========== */
+
+/* 主从布局 */
+.sub-layout {
+  display: flex;
+  gap: 24px;
+}
+
+.sub-left {
+  flex: 1.5;
+}
+
+.sub-right {
+  width: 340px;
+  flex-shrink: 0;
+}
+
+/* 投稿页头部 */
+.sub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sub-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.sub-header p {
+  font-size: 13px;
+  color: var(--text-mid);
+  margin-top: 4px;
+}
+
+/* 期刊卡片网格（两列） */
+.journal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+/* 期刊卡片 */
+.journal-card {
+  min-width: 0;
+  padding: 18px;
+
+  background: var(--card-white);
+  border: 1px solid #F3F4F6;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.journal-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+/* 截稿紧急提醒：左侧红色边框 */
+.journal-card.deadline-urgent {
+  border-left: 3px solid var(--brand-red);
+}
+
+.journal-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.journal-meta {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-bottom: 10px;
+}
+
+.journal-meta .deadline {
+  color: var(--text-mid);
+}
+
+.journal-meta .deadline.urgent {
+  color: var(--brand-red);
+  font-weight: 600;
+}
+
+.journal-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+
+  font-size: 12px;
+  color: var(--text-mid);
+}
+
+.journal-stats span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 匹配度进度条 */
+.journal-match {
+  margin-bottom: 10px;
+}
+
+.journal-match-bar {
+  height: 6px;
+  margin-top: 4px;
+
+  background: #F3F4F6;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.journal-match-fill {
+  height: 100%;
+
+  border-radius: 3px;
+
+  transition: width 1s ease;
+}
+
+/* 匹配百分比 */
+.match-pct {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.match-pct.high {
+  color: var(--brand-green);
+}
+
+.match-pct.mid {
+  color: var(--brand-orange);
+}
+
+.match-pct.low {
+  color: var(--text-light);
+}
+
+/* 期刊操作按钮行 */
+.journal-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* 环形进度（SVG） */
+.ring-progress {
+  width: 44px;
+  height: 44px;
+  position: relative;
+}
+
+.ring-progress svg {
+  transform: rotate(-90deg);
+}
+
+.ring-progress text {
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--text-mid);
+}
+
+/* 期刊环形进度包裹 */
+.journal-ring-wrap {
+  flex-shrink: 0;
+}
+
+/* ---------- 投稿 AI 对话 ---------- */
+
+/* 投稿对话容器 */
+.sub-chat {
+  display: flex;
+  flex-direction: column;
+
+  height: 520px;
+
+  background: var(--card-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.sub-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 14px 18px;
+
+  border-bottom: 1px solid #F3F4F6;
+
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.sub-chat-header .badge {
+  padding: 2px 8px;
+
+  background: #EDE9FE;
+  border-radius: var(--radius-full);
+
+  font-size: 10px;
+  color: var(--brand-purple);
+}
+
+/* 投稿对话消息区 */
+.sub-chat-msgs {
+  flex: 1;
+  overflow-y: auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  padding: 14px;
+}
+
+/* 投稿对话输入区 */
+.sub-chat-input {
+  display: flex;
+  gap: 8px;
+
+  padding: 10px 14px;
+
+  border-top: 1px solid #F3F4F6;
+}
+
+.sub-chat-input input {
+  flex: 1;
+
+  padding: 8px 12px;
+
+  border: 1px solid #E5E7EB;
+  border-radius: var(--radius-sm);
+  outline: none;
+
+  font-size: 13px;
+  font-family: var(--font-cn);
+}
+
+.sub-chat-input input:focus {
+  border-color: var(--brand-blue);
+}
+
+.sub-chat-input button {
+  width: 36px;
+  height: 36px;
+
+  background: var(--brand-blue);
+  border: none;
+  border-radius: 50%;
+
+  color: white;
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.sub-chat-input button:hover {
+  background: #1D4ED8;
+}
+
+/* ---------- 趋势图表 ---------- */
+
+.trend-section {
+  margin-top: 20px;
+
+  padding: 20px;
+
+  background: var(--card-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.trend-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+#trendChart {
+  width: 100%;
+  height: 280px;
+}
+
+/* ---------- 引用图谱 ---------- */
+
+.graph-container {
+  position: relative;
+}
+
+#graphTooltip {
+  position: absolute;
+  z-index: 5000;
+
+  display: none;
+
+  max-width: 240px;
+  padding: 12px 16px;
+
+  background: var(--card-white);
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+
+  font-size: 12px;
+  pointer-events: none;
+}
+
+#graphTooltip .tt-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+#graphTooltip .tt-meta {
+  color: var(--text-mid);
+}
+
+#graphTooltip .tt-stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+
+  font-size: 11px;
+  color: var(--text-light);
+}
+
+.citation-node:hover {
+  cursor: pointer;
+  filter: brightness(1.15);
+}
+
+.citation-edge {
+  transition: opacity 0.2s;
+}
+
+.citation-edge.dimmed {
+  opacity: 0.1;
+}
+
+/* 词云区块 */
+.word-cloud-section {
+  margin-top: 20px;
+
+  padding: 20px;
+
+  background: var(--card-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.word-cloud-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* 详情趋势区块 */
+.detail-trend-section {
+  margin-top: 20px;
+
+  padding: 20px;
+
+  background: var(--card-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.detail-trend-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+#detailTrendChart {
+  width: 100%;
+  height: 340px;
+}
+
+
+/* ========== V2 布局（新版投稿分析） ========== */
+
+/* 新版全高布局 */
+.sub-layout-new {
+  display: flex;
+  gap: 0;
+  height: calc(100vh - 48px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 投稿分析页容器：高度 = 视口 - page-content 上下 padding(48px) */
+#page-submit {
+  height: calc(100vh - 48px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 左侧列表 */
+.sub-left-new {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+
+  padding: 20px 24px;
+
+  background: var(--bg-light);
+  border-right: 1px solid #E5E7EB;
+}
+
+/* 右侧面板 */
+.sub-right-new {
+  width: 380px;
+  flex-shrink: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  background: var(--card-white);
+}
+
+/* 投稿筛选器 */
+.sub-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.sub-filter-select {
+  padding: 6px 12px;
+
+  background: var(--card-white);
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+
+  font-size: 13px;
+  font-family: var(--font-cn);
+  cursor: pointer;
+}
+
+/* 新版期刊网格 */
+.journal-grid-new {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+/* 新版期刊卡片 */
+.journal-card-new {
+  min-width: 0;
+  padding: 16px;
+
+  background: var(--card-white);
+  border: 1px solid #E5E7EB;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  transition: all 0.2s;
+}
+
+.journal-card-new:hover {
+  border-color: var(--brand-blue);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
+  transform: translateY(-2px);
+}
+
+.journal-card-new.deadline-urgent {
+  background: #FEF2F2;
+  border-color: #FCA5A5;
+}
+
+.journal-card-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.deadline-urgent-tag {
+  font-size: 11px;
+  color: #DC2626;
+}
+
+.deadline-urgent-text {
+  color: #DC2626;
+}
+
+.journal-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+
+  font-size: 13px;
+  color: var(--text-mid);
+}
+
+.journal-card-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+/* 新版投稿对话 */
+.sub-chat-new {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sub-chat-new .sub-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 14px 16px;
+
+  border-bottom: 1px solid #E5E7EB;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sub-chat-new .sub-chat-msgs {
+  flex: 1;
+  overflow-y: auto;
+
+  padding: 16px;
+}
+
+.sub-chat-new .sub-chat-input {
+  display: flex;
+  gap: 8px;
+
+  padding: 12px 16px;
+
+  border-top: 1px solid #E5E7EB;
+}
+
+.sub-chat-new .sub-chat-input input {
+  flex: 1;
+
+  padding: 8px 16px;
+
+  border: 1px solid #E5E7EB;
+  border-radius: 20px;
+  outline: none;
+
+  font-size: 13px;
+  font-family: var(--font-cn);
+}
+
+.sub-chat-new .sub-chat-input input:focus {
+  border-color: var(--brand-blue);
+}
+
+.sub-chat-new .sub-chat-input button {
+  width: 36px;
+  height: 36px;
+
+  background: var(--brand-blue);
+  border: none;
+  border-radius: 50%;
+
+  font-size: 16px;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* 走势指标 */
+.trend-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.trend-indicator.up {
+  color: var(--brand-green);
+}
+
+.trend-indicator.stable {
+  color: var(--text-light);
+}
+
+.trend-indicator.down {
+  color: var(--brand-orange);
+}
+/* =================================================================
+ * 十六、日历与统计弹窗
+ * ================================================================= */
+
+/* ---------- 日历弹窗 ---------- */
+
+.cal-overlay {
+  z-index: 6000;
+
+  display: none;
+
+  position: fixed;
+  inset: 0;
+
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* 日历筛选器 */
+.cal-filters {
+  margin-bottom: 12px;
+}
+
+.cal-modal {
+  width: 560px;
+  max-width: 95vw;
+  max-height: 80vh;
+  overflow-y: auto;
+
+  padding: 24px;
+
+  background: var(--card-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+
+  animation: dropIn 0.25s ease;
+}
+
+.cal-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.cal-close-btn {
+  background: none;
+  border: none;
+
+  font-size: 18px;
+  color: var(--text-mid);
+  cursor: pointer;
+}
+
+.cal-grid-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cal-month h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+
+  margin-bottom: 4px;
+
+  text-align: center;
+
+  font-size: 11px;
+  color: var(--text-light);
+}
+
+.cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal-day {
+  position: relative;
+
+  padding: 8px 4px;
+
+  border-radius: 4px;
+
+  font-size: 12px;
+  text-align: center;
+  cursor: default;
+}
+
+.cal-day.has-deadline {
+  background: #FEF2F2;
+
+  font-weight: 600;
+  color: #DC2626;
+}
+
+.cal-dot {
+  display: block;
+
+  width: 4px;
+  height: 4px;
+  margin: 2px auto 0;
+
+  background: #DC2626;
+  border-radius: 50%;
+}
+/* ---------- 期刊详情弹窗 ---------- */
+
+#journalDetailOverlay > div {
+  background: var(--card-white);
+  border-radius: var(--radius-lg);
+}
+
+/* =================================================================
+ * 投稿分析 Tab 导航栏
+ * ================================================================= */
+
+.sub-tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--bg-light);
+  margin-bottom: 0;
+}
+
+.sub-tab-btn {
+  padding: 8px 20px;
+
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+
+  font-size: 14px;
+  font-family: var(--font-cn);
+  font-weight: 500;
+  color: var(--text-mid);
+  cursor: pointer;
+
+  transition: var(--transition);
+  position: relative;
+}
+
+.sub-tab-btn:hover {
+  background: var(--bg-light);
+  color: var(--text-dark);
+}
+
+.sub-tab-btn.active {
+  background: var(--brand-blue);
+  color: #fff;
+}
+
+/* =================================================================
+ * 主视图切换：sub-main-view 始终显示，内部子视图按 class 显隐
+ *   .sub-view-journals / .sub-view-trends / .sub-view-graph
+ * ================================================================= */
+
+.sub-main-view .sub-view-hidden {
+  display: none !important;
+}
+
+/* 深色模式 Tab */
+html.dark .sub-tab-bar {
+  border-bottom-color: #2A2F3E;
+}
+
+html.dark .sub-tab-btn {
+  color: #94A3B8;
+}
+
+html.dark .sub-tab-btn:hover {
+  background: #1E2430;
+  color: #E2E8F0;
+}
+
+html.dark .sub-tab-btn.active {
+  background: var(--brand-blue);
+  color: #fff;
+}
+
+/* =================================================================
+ * 文献知识图谱三栏容器（基础布局，样式补充由 knowledge-graph.css 负责）
+ * ================================================================= */
+
+.graph-container {
+  display: flex;
+  gap: 0;
+  height: calc(100vh - 48px);
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-light);
+}
+
+.graph-left-panel {
+  width: 320px;
+  flex-shrink: 0;
+  overflow-y: auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+
+  background: var(--card-white);
+  border-right: 1px solid #E5E7EB;
+}
+
+.graph-group {
+  padding: 12px 16px;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.graph-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.graph-paper-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.graph-canvas-wrap {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-light);
+}
+
+.graph-canvas-inner {
+  width: 100%;
+  height: 100%;
+}
+
+.graph-right-panel {
+  width: 360px;
+  flex-shrink: 0;
+  overflow-y: auto;
+
+  background: var(--card-white);
+  border-left: 1px solid #E5E7EB;
+}
+
+.graph-detail-card {
+  padding: 20px;
+}
+
+/* 深色模式图谱 */
+html.dark .graph-left-panel {
+  background: #141926;
+  border-right-color: #2A2F3E;
+}
+
+html.dark .graph-right-panel {
+  background: #141926;
+  border-left-color: #2A2F3E;
+}
+
+html.dark .graph-group {
+  border-bottom-color: #2A2F3E;
+}
+
+html.dark .graph-canvas-wrap {
+  background: #0F1219;
+}
+
+html.dark .graph-detail-card {
+  background: #141926;
+}
+
+/* =================================================================
+ * 批次5：左侧文献列表条目、右侧详情面板、Loading 样式
+ * ================================================================= */
+
+/* ---------- 左侧论文条目 ---------- */
+.graph-paper-item {
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  border-left: 3px solid transparent;
+}
+
+.graph-paper-item:hover {
+  background: #F2F3F5;
+}
+
+.graph-paper-item.selected {
+  background: #E8F3FF;
+  border-left-color: var(--brand-blue);
+}
+
+.graph-paper-item.origin {
+  background: #FFF7E6;
+  border-left-color: #FF7D00;
+}
+
+.graph-paper-item.origin.selected {
+  background: #FFF0D9;
+  border-left-color: var(--brand-blue);
+}
+
+.graph-paper-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dark);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin-bottom: 4px;
+}
+
+.graph-paper-item-meta {
+  font-size: 11px;
+  color: var(--text-light);
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.graph-paper-empty {
+  font-size: 12px;
+  color: var(--text-light);
+  text-align: center;
+  padding: 16px 0;
+}
+
+/* ---------- 右侧详情面板 ---------- */
+.graph-detail-placeholder {
+  color: var(--text-light);
+  text-align: center;
+  padding: 40px 0;
+  font-size: 13px;
+}
+
+.graph-detail-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-dark);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.graph-detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #F7F8FA;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.graph-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.graph-detail-row .label {
+  color: var(--text-light);
+  min-width: 36px;
+  flex-shrink: 0;
+}
+
+.graph-detail-row .value {
+  color: var(--text-mid);
+  flex: 1;
+  word-break: break-word;
+}
+
+.graph-detail-section {
+  margin-bottom: 16px;
+}
+
+.graph-detail-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-mid);
+  margin-bottom: 6px;
+}
+
+.graph-detail-abstract {
+  font-size: 12px;
+  color: var(--text-mid);
+  line-height: 1.7;
+  text-align: justify;
+}
+
+/* ---------- 底部操作按钮 ---------- */
+.graph-detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #F3F4F6;
+}
+
+.btn-graph-action {
+  width: 100%;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #E5E7EB;
+  background: var(--card-white);
+  color: var(--text-mid);
+  font-size: 12px;
+  font-family: var(--font-cn, 'Inter', 'Noto Sans SC', sans-serif);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-graph-action:hover {
+  border-color: var(--brand-blue);
+  color: var(--brand-blue);
+}
+
+.btn-graph-action.primary {
+  background: var(--brand-blue);
+  color: #fff;
+  border-color: var(--brand-blue);
+}
+
+.btn-graph-action.primary:hover {
+  background: #0E42D2;
+}
+
+/* ---------- Loading 覆盖层 ---------- */
+.graph-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-light);
+  z-index: 10;
+}
+
+.graph-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #E5E7EB;
+  border-top-color: var(--brand-blue);
+  border-radius: 50%;
+  animation: graph-spin 0.8s linear infinite;
+}
+
+@keyframes graph-spin {
+  to { transform: rotate(360deg); }
+}
+
+.graph-loading-text {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-light);
+}
+
+/* ---------- 深色模式覆写 ---------- */
+html.dark .graph-paper-item:hover {
+  background: #1E2430;
+}
+
+html.dark .graph-paper-item.selected {
+  background: rgba(22, 93, 255, 0.12);
+}
+
+html.dark .graph-paper-item.origin {
+  background: rgba(255, 125, 0, 0.08);
+}
+
+html.dark .graph-paper-item-title {
+  color: #E8EAEF;
+}
+
+html.dark .graph-paper-item-meta {
+  color: #6B7280;
+}
+
+html.dark .graph-detail-title {
+  color: #E8EAEF;
+}
+
+html.dark .graph-detail-meta {
+  background: #1E2430;
+}
+
+html.dark .graph-detail-row .label {
+  color: #6B7280;
+}
+
+html.dark .graph-detail-row .value {
+  color: #9AA1B2;
+}
+
+html.dark .graph-detail-abstract {
+  color: #9AA1B2;
+}
+
+html.dark .graph-detail-actions {
+  border-top-color: #2A2F3E;
+}
+
+html.dark .btn-graph-action {
+  background: #1E2430;
+  border-color: #2A2F3E;
+  color: #9AA1B2;
+}
+
+html.dark .btn-graph-action:hover {
+  border-color: #4080FF;
+  color: #4080FF;
+}
+
+html.dark .btn-graph-action.primary {
+  background: #165DFF;
+  color: #fff;
+  border-color: #165DFF;
+}
+
+html.dark .btn-graph-action.primary:hover {
+  background: #0E42D2;
+}
+
+html.dark .graph-loading-overlay {
+  background: #0F1219;
+}
+
+html.dark .graph-loading-spinner {
+  border-color: #2A2F3E;
+  border-top-color: #4080FF;
+}
+
+html.dark .graph-loading-text {
+  color: #6B7280;
+}
+
+/* ---------- 空数据占位 ---------- */
+.graph-empty-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-light);
+  z-index: 10;
+}
+
+.graph-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+
+.graph-empty-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-mid);
+  margin-bottom: 8px;
+}
+
+.graph-empty-subtext {
+  font-size: 13px;
+  color: var(--text-light);
+}
+
+/* ---------- 节点超阈值截断提示 ---------- */
+.graph-truncated-tip {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--card-white);
+  border: 1px solid #E5E7EB;
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  z-index: 10;
+}
+
+.graph-truncated-text {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+.graph-truncated-btn {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--brand-blue);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-family: var(--font-cn, 'Inter', 'Noto Sans SC', sans-serif);
+}
+
+.graph-truncated-btn:hover {
+  background: #0E42D2;
+}
+
+/* ---------- 深色模式：空数据 + 截断提示 ---------- */
+html.dark .graph-empty-overlay {
+  background: #0F1219;
+}
+
+html.dark .graph-empty-text {
+  color: #9AA1B2;
+}
+
+html.dark .graph-empty-subtext {
+  color: #6B7280;
+}
+
+html.dark .graph-truncated-tip {
+  background: #141926;
+  border-color: #2A2F3E;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+html.dark .graph-truncated-text {
+  color: #6B7280;
+}
+
+html.dark .graph-truncated-btn {
+  background: #165DFF;
+}
+
+html.dark .graph-truncated-btn:hover {
+  background: #0E42D2;
+}
+
+/* =================================================================
+ * 十二、图谱工具栏 & 图例面板（批次7 新增）
+ * ================================================================= */
+
+/* ---------- 悬浮工具栏（图谱右上角 4 按钮） ---------- */
+.graph-toolbar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 15;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #E5E8EF;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+html.dark .graph-toolbar {
+  background: rgba(20, 25, 38, 0.92);
+  border-color: #2A2F3E;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
+}
+
+.graph-toolbar-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: #4E5969;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.graph-toolbar-btn:hover {
+  background: #F2F3F5;
+  color: #165DFF;
+}
+
+.graph-toolbar-btn:active {
+  transform: scale(0.94);
+}
+
+html.dark .graph-toolbar-btn {
+  color: #9AA1B2;
+}
+
+html.dark .graph-toolbar-btn:hover {
+  background: #222838;
+  color: #60A5FA;
+}
+
+/* ---------- 图例面板 ---------- */
+.graph-legend-panel {
+  position: absolute;
+  top: 62px;
+  right: 14px;
+  z-index: 15;
+  width: 260px;
+  max-height: calc(100% - 80px);
+  overflow-y: auto;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #E5E8EF;
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.10);
+  backdrop-filter: blur(8px);
+  animation: dropIn 0.18s ease;
+}
+
+html.dark .graph-legend-panel {
+  background: rgba(20, 25, 38, 0.97);
+  border-color: #2A2F3E;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.graph-legend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #F0F2F5;
+}
+
+html.dark .graph-legend-header {
+  border-bottom-color: #2A2F3E;
+}
+
+.graph-legend-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1D2129;
+  font-family: 'Inter', 'Noto Sans SC', sans-serif;
+}
+
+html.dark .graph-legend-title { color: #E5E7EB; }
+
+.graph-legend-close {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: #86909C;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+
+.graph-legend-close:hover {
+  background: #F2F3F5;
+  color: #1D2129;
+}
+
+html.dark .graph-legend-close { color: #6B7280; }
+html.dark .graph-legend-close:hover { background: #222838; color: #E5E7EB; }
+
+.graph-legend-section {
+  margin-bottom: 12px;
+}
+
+.graph-legend-section:last-child { margin-bottom: 0; }
+
+.graph-legend-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #86909C;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+html.dark .graph-legend-section-title { color: #6B7280; }
+
+.graph-legend-note {
+  font-size: 11px;
+  color: #86909C;
+  margin-bottom: 6px;
+  font-style: italic;
+}
+
+html.dark .graph-legend-note { color: #6B7280; }
+
+.graph-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: #4E5969;
+  font-family: 'Inter', 'Noto Sans SC', sans-serif;
+}
+
+html.dark .graph-legend-row { color: #9AA1B2; }
+
+.graph-legend-dot {
+  flex-shrink: 0;
+  display: inline-block;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.graph-legend-year-bar {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.graph-legend-text {
+  flex: 1;
+}
+
+.graph-legend-sub {
+  color: #86909C;
+  font-size: 11px;
+}
+
+html.dark .graph-legend-sub { color: #6B7280; }
+
+/* 全屏时画布容器自适应全屏 */
+#graphCanvasWrap:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg-light, #F7F8FA);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+html.dark #graphCanvasWrap:fullscreen {
+  background: #0F1219;
+}
+
+#graphCanvasWrap:fullscreen #graphCanvas {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* 滚动条（图例面板） */
+.graph-legend-panel::-webkit-scrollbar { width: 6px; }
+.graph-legend-panel::-webkit-scrollbar-track { background: transparent; }
+.graph-legend-panel::-webkit-scrollbar-thumb {
+  background: #D8DCE3;
+  border-radius: 3px;
+}
+.graph-legend-panel::-webkit-scrollbar-thumb:hover { background: #BFC5D0; }
+html.dark .graph-legend-panel::-webkit-scrollbar-thumb { background: #3A4052; }
+html.dark .graph-legend-panel::-webkit-scrollbar-thumb:hover { background: #4A5168; }
+

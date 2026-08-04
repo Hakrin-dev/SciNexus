@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<!--
+  研枢 YanShu — 论文阅读全屏独立页面
+  取代原有右侧抽屉弹窗，提供完整视口阅读体验。
+  路由进入：reading.html?id=论文ID
+  返回首页：点击左上角箭头或关闭按钮
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>论文阅读 — 研枢 YanShu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="CSS/variables.css">
+  <link rel="stylesheet" href="CSS/base.css">
+  <link rel="stylesheet" href="CSS/reading-page.css">
+  <link rel="stylesheet" href="CSS/dark-mode.css">
+</head>
+<body>
+
+  <div class="reading-page">
+
+    <!-- ========== 顶部导航栏 ========== -->
+    <nav class="reading-navbar">
+      <button class="reading-nav-back" onclick="goBackToHome()" title="返回首页">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="reading-nav-title" id="readingTitle">论文阅读</span>
+      <div class="reading-nav-tabs" id="readingNavTabs">
+        <button class="reading-nav-tab active" onclick="rpageSwitchTab('pdf')">PDF阅读</button>
+        <button class="reading-nav-tab" onclick="rpageSwitchTab('ai')">AI速读</button>
+        <button class="reading-nav-tab" onclick="rpageSwitchTab('similar')">相似论文</button>
+      </div>
+    </nav>
+
+    <!-- ========== 主体：左右双栏 ========== -->
+    <div class="reading-main">
+      <!-- 左栏：论文正文（60%） -->
+      <div class="reading-left" id="readingPdf">
+        <div class="rpage-progress-wrap"><div class="rpage-progress-fill" id="readingProgressFill"></div></div>
+        <div class="reading-pdf-wrap" id="readingPdfInner">
+          <div class="rpage-pdf-title" id="pdfDetailTitle">Attention Is All You Need</div>
+          <div class="rpage-pdf-meta" id="pdfDetailMeta">Vaswani et al. | NeurIPS 2017 | 引用数: 98,700+</div>
+          <div class="rpage-pdf-section">
+            <h3>Abstract</h3>
+            <p>The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.</p>
+          </div>
+          <div class="rpage-pdf-section">
+            <h3>1. Introduction</h3>
+            <p>Recurrent neural networks, long short-term memory and gated recurrent neural networks in particular, have been firmly established as state of the art approaches in sequence modeling and transduction problems such as language modeling and machine translation.</p>
+            <p>The Transformer, proposed in this work, eschews recurrence and instead relies entirely on an attention mechanism to draw global dependencies between input and output. The Transformer allows for significantly more parallelization and can reach a new state of the art in translation quality after being trained for as little as twelve hours on eight GPU.</p>
+          </div>
+          <div class="rpage-pdf-section">
+            <h3>3. Model Architecture</h3>
+            <p>Most competitive neural sequence transduction models have an encoder-decoder structure. The encoder maps an input sequence of symbol representations to a sequence of continuous representations. The decoder then generates an output sequence of symbols one element at a time.</p>
+            <div class="formula" onclick="openFormulaInterpretation('attention')">Attention(Q,K,V) = softmax(QK<sup>T</sup>&frasl;&radic;d<sub>k</sub>)V</div>
+            <p>The Transformer uses multi-head attention, where the attention function is computed in parallel over h heads:</p>
+            <div class="formula" onclick="openFormulaInterpretation('multihead')">MultiHead(Q,K,V) = Concat(head<sub>1</sub>,...,head<sub>h</sub>)W<sup>O</sup></div>
+            <div class="formula" onclick="openFormulaInterpretation('head')">head<sub>i</sub> = Attention(QW<sub>i</sub><sup>Q</sup>, KW<sub>i</sub><sup>K</sup>, VW<sub>i</sub><sup>V</sup>)</div>
+          </div>
+        </div>
+
+        <!-- PDF 页码控件 -->
+        <div id="pdfPageControls" style="display:none;justify-content:center;align-items:center;gap:16px;padding:12px;background:var(--bg-light);border:1px solid #E5E8EF;max-width:800px;margin:0 auto;border-radius:0 0 8px 8px;">
+          <button onclick="prevPdfPage()" style="padding:8px 16px;border:1px solid #E5E8EF;border-radius:6px;background:var(--card-white);cursor:pointer;font-size:13px;font-family:var(--font-cn);">← 上一页</button>
+          <span id="pdfPageIndicator" style="font-size:13px;font-weight:500;min-width:60px;text-align:center;">1 / 1</span>
+          <button onclick="nextPdfPage()" style="padding:8px 16px;border:1px solid #E5E8EF;border-radius:6px;background:var(--card-white);cursor:pointer;font-size:13px;font-family:var(--font-cn);">下一页 →</button>
+        </div>
+
+        <!-- 文本选中浮动菜单 -->
+        <div class="pdf-float-menu" id="pdfFloatMenu" style="position:absolute;display:none;padding:4px;background:var(--card-white);border:1px solid #E5E8EF;border-radius:6px;box-shadow:var(--shadow-lg);z-index:500;">
+          <button onclick="onPdfFloatAction('translate')" style="padding:6px 14px;background:transparent;border:none;border-radius:4px;font-size:12px;font-family:var(--font-cn);color:var(--text-mid);cursor:pointer;">翻译</button>
+          <button onclick="onPdfFloatAction('explain')" style="padding:6px 14px;background:transparent;border:none;border-radius:4px;font-size:12px;font-family:var(--font-cn);color:var(--text-mid);cursor:pointer;">解释</button>
+          <button onclick="onPdfFloatAction('question')" style="padding:6px 14px;background:transparent;border:none;border-radius:4px;font-size:12px;font-family:var(--font-cn);color:var(--text-mid);cursor:pointer;">提问</button>
+        </div>
+      </div>
+
+      <!-- 右栏：信息侧边栏（40%） -->
+      <div class="reading-right" id="readingAi">
+        <div class="rpage-ai-tabs">
+          <button class="rpage-ai-tab active" onclick="rpageSwitchAiTab(this,'summary')">摘要</button>
+          <button class="rpage-ai-tab" onclick="rpageSwitchAiTab(this,'novelty')">创新</button>
+          <button class="rpage-ai-tab" onclick="rpageSwitchAiTab(this,'experiment')">实验</button>
+          <button class="rpage-ai-tab" onclick="rpageSwitchAiTab(this,'qa')">问答</button>
+          <button class="rpage-ai-tab" onclick="rpageSwitchAiTab(this,'translate')">翻译</button>
+        </div>
+        <div class="rpage-ai-content" id="readingAiContent">
+          <!-- 由 initReadingPage 动态填充 -->
+        </div>
+        <div class="rpage-ai-input">
+          <input placeholder="对论文提出你的问题..." id="readingAiInput" onkeydown="if(event.key==='Enter'){askReadingQuestion()}">
+          <button onclick="askReadingQuestion()">&#10148;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 底部操作栏 ========== -->
+    <div class="rpage-bottombar">
+      <button class="rpage-btn primary" id="readingFavBtn" onclick="toggleReadingFav()">&#9825; 收藏</button>
+      <button class="rpage-btn" onclick="downloadPdf()">&#128229; 下载PDF</button>
+      <button class="rpage-btn" onclick="exportReadingCitation()">&#128221; 导出引用</button>
+      <button class="rpage-btn" onclick="shareReadingPaper()">&#128228; 分享</button>
+      <button class="rpage-btn" onclick="openGraphFromReading()">&#128250; 引用图谱</button>
+    </div>
+  </div>
+
+  <!-- ========== 公式解读弹窗 ========== -->
+  <div class="formula-overlay" id="formulaOverlay" onclick="if(event.target===this)closeFormulaModal()">
+    <div class="formula-modal">
+      <h3 id="formulaTitle">公式解读</h3>
+      <div class="formula-display" id="formulaDisplay"></div>
+      <div class="formula-section">
+        <h4>逐步解读</h4>
+        <p id="formulaStepByStep"></p>
+      </div>
+      <div class="formula-section">
+        <h4>变量含义</h4>
+        <p id="formulaVariables"></p>
+      </div>
+      <div class="formula-section">
+        <h4>物理意义</h4>
+        <p id="formulaMeaning"></p>
+      </div>
+      <button class="formula-close" onclick="closeFormulaModal()">关闭</button>
+    </div>
+  </div>
+
+  <!-- ========== 图谱提示容器（供引文图谱使用） ========== -->
+  <div id="graphTooltip" style="position:fixed;display:none;background:var(--card-white);border:1px solid #E5E8EF;border-radius:8px;padding:12px;box-shadow:var(--shadow-lg);font-size:12px;z-index:5000;pointer-events:none;"></div>
+
+  <!-- ========== 外部脚本 (按依赖顺序) ========== -->
+  <script src="js/utils.js?v=8"></script>
+  <script src="js/api.js?v=8"></script>
+  <script src="js/markdown.js?v=8"></script>
+  <script src="js/library.js?v=8"></script>
+  <script src="js/search.js?v=8"></script>
+  <script src="js/reading.js?v=8"></script>
+  <script src="js/app.js?v=8"></script>
+
+  <!-- ========== 阅读页初始化 ========== -->
+  <script>
+    (function() {
+      // 如果 app.js 的 preRender 未填充 papers，手动兜底
+      const fallbackPapers = [
+        { id:'p1',title:'Attention Is All You Need',authors:'Vaswani et al.',venue:'NeurIPS 2017',year:2017,ccf:'A',citations:'98,700+',heat:'Hot',keywords:['NLP','Transformer'],abstract:'提出了革命性的Transformer架构，完全基于自注意力机制替代传统的循环和卷积结构。核心创新包括缩放点积注意力、多头注意力机制和位置编码。在WMT 2014英德翻译任务上取得28.4 BLEU，训练时间大幅缩短。' },
+        { id:'p2',title:'BERT: Pre-training of Deep Bidirectional Transformers',authors:'Devlin et al.',venue:'NAACL 2019',year:2019,ccf:'A',citations:'65,200+',heat:'Hot',keywords:['NLP','预训练'],abstract:'提出BERT预训练模型，通过掩码语言模型（MLM）和下一句预测（NSP）实现深度双向表征学习。' },
+        { id:'p5',title:'Swin Transformer: Hierarchical Vision Transformer',authors:'Liu et al.',venue:'ICCV 2021',year:2021,ccf:'A',citations:'18,500+',heat:'Hot',keywords:['CV','Transformer'],abstract:'提出Swin Transformer——一种层次化视觉Transformer架构。通过移位窗口机制在局部窗口内计算自注意力。' },
+        { id:'p19',title:'Deep Residual Learning for Image Recognition',authors:'He et al.',venue:'CVPR 2016',year:2016,ccf:'A',citations:'178,000+',heat:'Hot',keywords:['ML','深度学习'],abstract:'提出残差学习框架（ResNet），通过跳连接解决了深层网络退化问题。152层ResNet在ImageNet上达到3.57% top-5错误率。' }
+      ];
+      if (typeof papers === 'undefined' || !papers || !papers.length) {
+        window.papers = fallbackPapers;
+      }
+      if (typeof libraryPapers === 'undefined' || !libraryPapers || !libraryPapers.length) {
+        window.libraryPapers = [];
+      }
+
+      // 深色模式初始化
+      (function initDarkMode() {
+        const saved = localStorage.getItem('deepknow_theme');
+        if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      })();
+
+      // 获取当前论文 ID
+      const urlParams = new URLSearchParams(window.location.search);
+      const paperId = urlParams.get('id');
+
+      /** 返回首页 */
+      window.goBackToHome = function() {
+        window.location.href = 'index.html';
+      };
+
+      /** 导航栏标签切换 */
+      window.rpageSwitchTab = function(tab) {
+        document.querySelectorAll('.reading-nav-tab').forEach(t => t.classList.remove('active'));
+        const tabs = document.querySelectorAll('.reading-nav-tab');
+        const tabMap = { pdf: 0, ai: 1, similar: 2 };
+        if (tabs[tabMap[tab]]) tabs[tabMap[tab]].classList.add('active');
+
+        const leftEl = document.getElementById('readingPdf');
+        const rightEl = document.getElementById('readingAi');
+
+        if (tab === 'similar') {
+          if (leftEl) leftEl.style.display = 'none';
+          if (rightEl) { rightEl.style.width = '100%'; rightEl.style.flex = '0 0 100%'; }
+          // 在 AI 面板渲染相似论文
+          const content = document.getElementById('readingAiContent');
+          if (content) {
+            content.innerHTML = '<h4 style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text-dark);">引文网络关系图谱</h4><p style="font-size:12px;color:var(--text-light);margin-bottom:12px;">节点大小=引用量 | 颜色=研究方向 | 连线=引用关系</p><svg id="citationGraph" width="100%" height="480" style="background:var(--bg-light);border-radius:8px;border:1px solid #E5E8EF;"></svg>';
+          }
+          document.querySelectorAll('.rpage-ai-tab').forEach(t => t.classList.remove('active'));
+          setTimeout(function() {
+            if (typeof initCitationGraph === 'function') initCitationGraph();
+          }, 100);
+        } else {
+          if (leftEl) leftEl.style.display = '';
+          if (rightEl) { rightEl.style.width = ''; rightEl.style.flex = ''; }
+          if (tab === 'ai') {
+            const summaryTab = document.querySelector('.rpage-ai-tab[onclick*="summary"]');
+            if (summaryTab) rpageSwitchAiTab(summaryTab, 'summary');
+          }
+        }
+      };
+
+      /** 右侧子标签切换 —— 桥接 reading.js 的 switchReadingAiTab */
+      window.rpageSwitchAiTab = function(el, tab) {
+        document.querySelectorAll('.rpage-ai-tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+
+        const paperId = document.getElementById('readingTitle')?.dataset?.paperId;
+        const paper = (window.papers || []).find(p => p.id === paperId) ||
+                      (window.libraryPapers || []).find(p => p.id === paperId) || {};
+        const keywords = paper.keywords || [];
+        const keywordsHtml = keywords.map(k => '<span style="padding:2px 10px;background:#EFF6FF;border-radius:12px;font-size:11px;color:var(--brand-blue);">'+escapeHtml(k)+'</span>').join('');
+
+        const contents = {
+          summary: '<div><h4 style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text-dark);border-bottom:2px solid var(--brand-blue);padding-bottom:6px;">AI 速读</h4>'
+            + '<p style="font-size:13px;color:var(--text-mid);margin-bottom:8px;"><strong>论文摘要</strong></p>'
+            + '<p style="font-size:13px;color:var(--text-mid);line-height:1.7;">' + escapeHtml(paper.abstract || '暂无摘要') + '</p>'
+            + (keywords.length ? '<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">' + keywordsHtml + '</div>' : '')
+            + '<p style="margin-top:16px;font-size:13px;color:var(--text-mid);"><strong>基本信息</strong></p>'
+            + '<ul style="padding-left:16px;margin-top:6px;font-size:13px;color:var(--text-mid);">'
+            + '<li>作者：' + escapeHtml(paper.authors || '未知') + '</li>'
+            + '<li>发表：' + escapeHtml(paper.venue || '未知') + '</li>'
+            + '<li>引用数：' + escapeHtml(paper.citations || 'N/A') + '</li>'
+            + '<li>CCF 等级：' + escapeHtml(paper.ccf || 'N/A') + '</li>'
+            + '</ul></div>',
+          novelty: '<h4 style="font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text-dark);">创新点分析</h4>'
+            + '<p style="font-size:13px;color:var(--text-mid);"><strong>核心关键词：</strong></p>'
+            + (keywords.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">' + keywordsHtml + '</div>' : '<p style="color:var(--text-light);">暂无关键词信息</p>')
+            + '<p style="margin-top:12px;font-size:13px;color:var(--text-mid);"><strong>潜在创新方向：</strong></p>'
+            + '<ul style="padding-left:16px;margin-top:6px;font-size:13px;color:var(--text-mid);">'
+            + (keywords.length ? keywords.slice(0, 3).map(k => '<li>'+escapeHtml(k)+' 相关的方法创新</li>').join('') : '<li>请阅读论文了解详细创新点</li>')
+            + '</ul>'
+            + '<p style="margin-top:12px;color:var(--text-light);font-size:12px;">提示：点击"问答"标签，向 AI 提问获取更深入的创新点分析。</p>',
+          experiment: '<h4 style="font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text-dark);">实验分析</h4>'
+            + '<p style="font-size:13px;color:var(--text-mid);"><strong>发表信息：</strong></p>'
+            + '<ul style="padding-left:16px;margin-top:6px;font-size:13px;color:var(--text-mid);">'
+            + '<li>会议/期刊：' + escapeHtml(paper.venue || '未知') + '</li>'
+            + '<li>年份：' + escapeHtml((paper.year || 'N/A').toString()) + '</li>'
+            + '<li>引用数：' + escapeHtml(paper.citations || 'N/A') + '</li>'
+            + '</ul>'
+            + '<p style="margin-top:12px;color:var(--text-light);font-size:12px;">提示：如需详细实验数据分析，请使用 AI 问答功能。</p>',
+          qa: '<h4 style="font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text-dark);">问答</h4>'
+            + '<p style="font-size:13px;color:var(--text-mid);">您可以在此询问关于「' + escapeHtml(paper.title || '当前论文') + '」的问题，AI 将基于论文上下文进行回答。</p>'
+            + '<p style="color:var(--text-light);margin-top:8px;font-size:13px;">示例问题：</p>'
+            + '<ul style="padding-left:16px;margin-top:6px;font-size:13px;color:var(--text-mid);">'
+            + '<li>这篇论文的核心方法是什么？</li>'
+            + '<li>论文中使用了哪些数据集？</li>'
+            + '<li>该方法相比之前的工作有哪些优势？</li>'
+            + '</ul>',
+          translate: '<h4 style="font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text-dark);">翻译</h4>'
+            + '<p style="font-size:13px;color:var(--text-mid);">选择论文中的文本段落，即可查看中文翻译。</p>'
+            + '<p style="color:var(--text-light);margin-top:8px;font-size:13px;">选中 PDF 中的文字后，点击工具栏中的"翻译"按钮。</p>'
+            + (paper.title ? '<div style="margin-top:16px;padding:12px;background:var(--bg-light);border-radius:8px;"><strong>标题翻译：</strong><br>' + escapeHtml(paper.title) + '</div>' : '')
+        };
+
+        const contentDiv = document.getElementById('readingAiContent');
+        if (contentDiv) {
+          if (tab === 'similar') {
+            let similarPapers = [];
+            const paperId = document.getElementById('readingTitle')?.dataset?.paperId;
+            const allPapers = window.papers || [];
+            if (keywords.length > 0) {
+              similarPapers = allPapers
+                .filter(p => p.id !== paperId)
+                .map(p => ({ id: p.id, title: p.title, authors: p.authors, venue: p.venue, _overlap: (p.keywords || []).filter(k => keywords.includes(k)).length }))
+                .filter(p => p._overlap > 0)
+                .sort((a, b) => b._overlap - a._overlap)
+                .slice(0, 3);
+            }
+            if (similarPapers.length < 3) {
+              const existing = similarPapers.map(s => s.id);
+              const fallback = allPapers
+                .filter(p => p.id !== paperId && !existing.includes(p.id))
+                .filter(p => !paper.ccf || p.ccf === paper.ccf)
+                .slice(0, 3 - similarPapers.length)
+                .map(p => ({ id: p.id, title: p.title, authors: p.authors, venue: p.venue, _overlap: 0 }));
+              similarPapers = similarPapers.concat(fallback);
+            }
+            if (similarPapers.length === 0) {
+              similarPapers = allPapers.filter(p => p.id !== paperId).slice(0, 3).map(p => ({ id: p.id, title: p.title, authors: p.authors, venue: p.venue, _overlap: 0 }));
+            }
+            let html = '<h4 style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text-dark);">相似论文推荐</h4><div class="similar-grid">';
+            similarPapers.forEach(sp => {
+              const tagLabel = sp._overlap > 0 ? sp._overlap + ' 个共同关键词' : '同领域';
+              html += '<div class="similar-card" onclick="reloadWithPaperId(\''+sp.id+'\')">'
+                + '<div class="similar-card-title">'+escapeHtml(sp.title)+'</div>'
+                + '<div class="similar-card-meta">'+escapeHtml(sp.authors)+' | '+escapeHtml(sp.venue)+'</div>'
+                + '<span class="similar-card-tag">'+tagLabel+'</span>'
+                + '</div>';
+            });
+            html += '</div>';
+            contentDiv.innerHTML = html;
+          } else {
+            contentDiv.innerHTML = contents[tab] || contents.summary;
+          }
+        }
+      };
+
+      /** 重新加载页面到新的论文 ID（用于相似论文跳转） */
+      window.reloadWithPaperId = function(id) {
+        window.location.href = 'reading.html?id=' + encodeURIComponent(id);
+      };
+
+      /** 重写 openReading —— 全屏页面内重载论文内容 */
+      window.openReading = function(id) {
+        window.reloadWithPaperId(id);
+      };
+
+      /** 重写 closeReading —— 返回首页 */
+      window.closeReading = function() {
+        window.goBackToHome();
+      };
+
+      /** 初始化阅读阅读进度 */
+      function initReadingProgress(paperId) {
+        const leftEl = document.getElementById('readingPdf');
+        const fill = document.getElementById('readingProgressFill');
+        if (!leftEl || !fill) return;
+        const progressData = JSON.parse(localStorage.getItem('deepknow_reading_progress') || '{}');
+        const savedPct = progressData[paperId] || 0;
+        fill.style.width = (savedPct > 0 ? savedPct : 0) + '%';
+        let timer = null;
+        leftEl.addEventListener('scroll', function() {
+          clearTimeout(timer);
+          timer = setTimeout(function() {
+            const scrollTop = leftEl.scrollTop;
+            const scrollHeight = leftEl.scrollHeight - leftEl.clientHeight;
+            const pct = scrollHeight > 0 ? Math.min(100, Math.round((scrollTop / scrollHeight) * 100)) : 0;
+            fill.style.width = pct + '%';
+            const data = JSON.parse(localStorage.getItem('deepknow_reading_progress') || '{}');
+            data[paperId] = pct;
+            localStorage.setItem('deepknow_reading_progress', JSON.stringify(data));
+          }, 200);
+        });
+      }
+
+      /** 重写 saveReadingProgress —— 适配全屏页面 */
+      window.saveReadingProgress = function() {
+        const leftEl = document.getElementById('readingPdf');
+        if (!leftEl) return;
+        const scrollTop = leftEl.scrollTop;
+        const scrollHeight = leftEl.scrollHeight - leftEl.clientHeight;
+        const pct = scrollHeight > 0 ? Math.min(100, Math.round((scrollTop / scrollHeight) * 100)) : 0;
+        const paperId = document.getElementById('readingTitle')?.dataset?.paperId;
+        if (paperId) {
+          const data = JSON.parse(localStorage.getItem('deepknow_reading_progress') || '{}');
+          data[paperId] = pct;
+          localStorage.setItem('deepknow_reading_progress', JSON.stringify(data));
+        }
+      };
+
+      /** 初始渲染阅读页面 */
+      function initReadingPage(id) {
+        if (!id) {
+          document.getElementById('readingTitle').textContent = '未指定论文 ID';
+          document.getElementById('readingAiContent').innerHTML = '<p style="color:var(--text-light);text-align:center;padding:40px 0;">请从论文列表页面选择一篇论文进行阅读。</p>';
+          return;
+        }
+
+        const paper = (window.papers || []).find(p => p.id === id) ||
+                      (window.libraryPapers || []).find(p => p.id === id);
+
+        if (!paper) {
+          document.getElementById('readingTitle').textContent = '论文未找到';
+          document.getElementById('readingAiContent').innerHTML = '<p style="color:var(--text-light);text-align:center;padding:40px 0;">未找到 ID 为 ' + escapeHtml(id) + ' 的论文。</p>';
+          return;
+        }
+
+        // 更新页面标题
+        document.title = paper.title + ' — 研枢 YanShu';
+
+        // 顶部导航标题
+        const titleEl = document.getElementById('readingTitle');
+        titleEl.textContent = paper.title;
+        titleEl.dataset.paperId = id;
+
+        // 左栏 PDF 内容
+        document.getElementById('pdfDetailTitle').textContent = paper.title;
+        document.getElementById('pdfDetailMeta').innerHTML = paper.authors + ' | ' + paper.venue + '<br>引用数: ' + paper.citations + ' | 年份: ' + (paper.year||'N/A');
+
+        // 右栏摘要内容
+        const aiContent = document.getElementById('readingAiContent');
+        if (aiContent) {
+          aiContent.innerHTML = '<h4 style="font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text-dark);">论文摘要</h4>'
+            + '<p style="font-size:13px;color:var(--text-mid);line-height:1.7;">' + (paper.abstract || '暂无摘要') + '</p>'
+            + '<div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:6px;">'
+            + (paper.keywords||[]).map(k => '<span style="padding:2px 10px;background:#EFF6FF;border-radius:12px;font-size:11px;color:var(--brand-blue);">' + escapeHtml(k) + '</span>').join('')
+            + '</div>';
+        }
+
+        // 重置右侧 tabs 到摘要
+        document.querySelectorAll('.rpage-ai-tab').forEach(t => t.classList.remove('active'));
+        const summaryTab = document.querySelector('.rpage-ai-tab[onclick*="summary"]');
+        if (summaryTab) summaryTab.classList.add('active');
+
+        // 初始化阅读进度
+        initReadingProgress(id);
+
+        // 更新收藏按钮状态
+        updateFavButtonState(id);
+
+        // 重置导航 tab 到 PDF 阅读
+        document.querySelectorAll('.reading-nav-tab').forEach(t => t.classList.remove('active'));
+        if (document.querySelector('.reading-nav-tab')) document.querySelector('.reading-nav-tab').classList.add('active');
+        document.getElementById('readingPdf').style.display = '';
+        document.getElementById('readingAi').style.width = '';
+        document.getElementById('readingAi').style.flex = '';
+      }
+
+      /** 更新收藏按钮状态 */
+      function updateFavButtonState(paperId) {
+        const favBtn = document.getElementById('readingFavBtn');
+        if (!favBtn) return;
+        try {
+          const favs = JSON.parse(localStorage.getItem('deepknow_favorites') || '[]');
+          if (favs.includes(paperId)) {
+            favBtn.innerHTML = '&#10084; 已收藏';
+            favBtn.style.color = 'var(--brand-red)';
+            favBtn.style.borderColor = 'rgba(245,63,63,0.4)';
+          } else {
+            favBtn.innerHTML = '&#9825; 收藏';
+            favBtn.style.color = '';
+            favBtn.style.borderColor = '';
+          }
+        } catch(e) {}
+      }
+
+      // 页面加载入口
+      initReadingPage(paperId);
+
+      // Esc 关闭公式弹窗
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          const fo = document.getElementById('formulaOverlay');
+          if (fo && fo.classList.contains('active')) {
+            closeFormulaModal();
+          }
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>

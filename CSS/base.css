@@ -1,0 +1,146 @@
+/**
+ * base.css — 基础重置与全局排版
+ * 全局盒模型重置、body 主体、交互控件统一行为、键盘焦点环、
+ * 选中文字高亮、滚动条、页面切换系统与通用工具类。
+ */
+
+/* =================================================================
+ * 二、全局重置与基础排版
+ * ================================================================= */
+
+/* 全局盒模型重置 */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 防止水平溢出的全局保护 */
+html {
+  overflow-x: hidden;
+}
+
+/* 页面主体 */
+body {
+  font-family: var(--font-cn);
+  background: var(--bg-light);
+  color: var(--text-dark);
+  font-size: 14px;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* 字体渲染优化（抗锯齿） */
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+/* =================================================================
+ * 三、交互增强与骨架屏
+ * ================================================================= */
+
+/* 统一交互控件：取消文本选中 */
+button,
+.nav-item,
+.folder-item,
+.tag-item,
+.filter-tag,
+.ai-conv-item,
+.paper-card,
+.lib-item,
+.reading-tab,
+.reading-ai-tab {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* 键盘焦点环（a11y 可访问性） */
+button:focus-visible,
+.nav-item:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--brand-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* 选中文字高亮 */
+::selection {
+  background: rgba(26,86,219,0.2);
+  color: var(--ink);
+}
+
+/* =================================================================
+ * 四、滚动条
+ * ================================================================= */
+
+/* WebKit 滚动条整体宽度 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+/* 滚动条轨道（透明背景） */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 滚动条滑块 */
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+/* 滚动条滑块悬停 */
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+/* 页面内容内边距 + 淡入动画 */
+.page-content {
+  padding: 24px 32px;
+
+  animation: fadeIn 0.4s ease;
+}
+
+/* 页面切换：默认隐藏，激活时淡入 */
+.page {
+  display: none;
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.page.active {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* 通用工具类 */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.text-sm {
+  font-size: 13px;
+}
+
+.text-xs {
+  font-size: 12px;
+}
+
+.gap-8 {
+  gap: 8px;
+}
+
+.mt-8 {
+  margin-top: 8px;
+}
+
+.mt-12 {
+  margin-top: 12px;
+}

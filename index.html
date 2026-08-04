@@ -10,8 +10,9 @@
     <title>研枢 YanShu — AI 科研全链路平台</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="CSS/style.css">
+    <link rel="stylesheet" href="CSS/submission.css?v=8">
   </head>
 
   <body>
@@ -23,44 +24,49 @@
         <div class="sidebar-logo-icon">研</div>
         <span class="sidebar-logo-text">研枢</span>
       </div>
-      <button class="sidebar-toggle" onclick="toggleSidebar()" title="折叠/展开侧栏">&#10094;</button>
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="折叠/展开侧栏">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
 
-      <!-- 导航菜单：分"主要"和"管理"两组 -->
+      <!-- 导航菜单：分"文献探索"和"个人管理"两组 -->
       <div class="sidebar-nav">
-        <div class="sidebar-group-label">主要</div>
+        <div class="sidebar-group-label">文献探索</div>
         <a class="nav-item active" data-page="page-search" onclick="navigateTo('page-search')" data-tooltip="论文搜索">
-          <span class="nav-icon">&#128269;</span>
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
           <span class="nav-label">论文搜索</span>
         </a>
         <a class="nav-item" data-page="page-ai" onclick="navigateTo('page-ai')" data-tooltip="AI科研助手">
-          <span class="nav-icon">&#10024;</span>
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/><path d="M19 17L19.7 19.3L22 20L19.7 20.7L19 23L18.3 20.7L16 20L18.3 19.3L19 17Z"/></svg></span>
           <span class="nav-label">AI科研助手</span>
         </a>
         <a class="nav-item" data-page="page-submit" onclick="navigateTo('page-submit')" data-tooltip="投稿分析">
-          <span class="nav-icon">&#128202;</span>
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="11"/><line x1="4" y1="20" x2="20" y2="20"/></svg></span>
           <span class="nav-label">投稿分析</span>
         </a>
 
-        <div class="sidebar-group-label" style="margin-top:8px;">管理</div>
+        <div class="sidebar-group-label">个人管理</div>
         <a class="nav-item" data-page="page-library" onclick="navigateTo('page-library')" data-tooltip="个人文献库">
-          <span class="nav-icon">&#128193;</span>
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span>
           <span class="nav-label">个人文献库</span>
         </a>
         <a class="nav-item" data-page="page-favorites" onclick="navigateTo('page-favorites')" data-tooltip="收藏夹" id="favNavItem">
-          <span class="nav-icon">&#11088;</span>
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></span>
           <span class="nav-label">收藏夹</span>
           <span class="fav-badge" id="favBadge" style="display:none;">0</span>
         </a>
         <a class="nav-item" data-page="page-notifications" onclick="navigateTo('page-notifications')" data-tooltip="通知">
-          <span class="nav-icon">&#128276;</span>
+          <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>
           <span class="nav-label">通知</span>
         </a>
       </div>
 
-      <!-- 侧栏底部：深色模式切换和用户信息 -->
+      <!-- 侧栏底部：设置区域（深色模式切换）+ 用户信息 -->
       <div class="sidebar-bottom">
+        <div class="sidebar-group-label">设置</div>
         <button class="dark-toggle" onclick="toggleDarkMode()" title="切换深色/浅色模式">
-          <span class="dark-toggle-icon" id="darkToggleIcon">&#127769;</span>
+          <span class="dark-toggle-icon" id="darkToggleIcon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </span>
           <span class="dark-toggle-label" id="darkToggleLabel">深色模式</span>
         </button>
         <div class="user-profile" onclick="alert('&#128100; 个人设置（Demo）\n用户: 张明远\n博士生 · CS')">
@@ -88,82 +94,115 @@
 
         <!-- ============ 界面一：搜索推荐页 ============ -->
         <div class="page active" id="page-search">
+          <!-- Hero 区块：单栏左对齐，学术极简风格 -->
           <div class="hero-section">
-            <h1 class="hero-title">探索学术前沿</h1>
-            <p class="hero-sub">智能语义检索 · 精准期刊匹配 · 每日更新海量论文</p>
-            <div style="display:flex;gap:12px;justify-content:center;margin:20px 0 8px;flex-wrap:wrap;">
-              <div style="background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.12);border-radius:10px;padding:10px 16px;cursor:pointer;font-size:13px;color:var(--brand-blue);font-weight:500;transition:all 0.2s;display:flex;align-items:center;gap:6px;"
-                   onclick="navigateTo('page-ai');setTimeout(()=>$('aiInput')?.focus(),300);">
-                ✨ 开始AI对话
-              </div>
-              <div style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.12);border-radius:10px;padding:10px 16px;cursor:pointer;font-size:13px;color:var(--brand-purple);font-weight:500;transition:all 0.2s;display:flex;align-items:center;gap:6px;"
-                   onclick="navigateTo('page-submit');">
-                🎯 投稿分析
-              </div>
-              <div style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.12);border-radius:10px;padding:10px 16px;cursor:pointer;font-size:13px;color:var(--brand-green);font-weight:500;transition:all 0.2s;display:flex;align-items:center;gap:6px;"
-                   onclick="navigateTo('page-library');">
-                📚 我的文献库
-              </div>
-            </div>
-            <div class="search-box-wrap">
-              <div class="search-box">
-                <span class="search-icon">&#128269;</span>
-                <input class="search-input" id="searchInput" placeholder="输入论文标题、关键词或研究方向..."
-                onfocus="showSearchHistory()"
-                oninput="if(document.getElementById('searchHistoryPanel').classList.contains('active'))showSearchHistory();"
-                onkeydown="if(event.key==='Enter')addSearchHistory()">
-                <button class="search-btn semantic" onclick="navigateTo('page-ai');setTimeout(()=>{$('aiInput').value='帮我搜索关于'+($('searchInput').value||'深度学习')+'的论文';setTimeout(()=>sendAiMessage(),100)},300);">语义搜索</button>
-                <button class="search-btn main" onclick="addSearchHistory();showToast('🔍 搜索功能已触发: '+($('searchInput').value||'深度学习'),'info')">搜索</button>
-
-                <!-- 搜索历史面板 -->
-                <div class="search-history-panel" id="searchHistoryPanel">
-                  <div class="search-history-header">
-                    <span class="search-history-title">搜索历史</span>
-                    <span class="search-history-clear" onclick="clearSearchHistory()">清空全部</span>
+            <div class="hero-body">
+              <div class="hero-content">
+                <p class="hero-en-sub">Discover Academic Frontiers</p>
+                <h1 class="hero-title">探索学术前沿</h1>
+                <p class="hero-sub">AI文献语义检索 <span class="hero-sep">·</span> 期刊分区匹配 <span class="hero-sep">·</span> 每日更新顶会期刊论文</p>
+                <!-- 核心交互：搜索框优先级最高 -->
+                <div class="search-box-wrap">
+                  <div class="search-box">
+                    <svg class="search-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input class="search-input" id="searchInput" placeholder="输入论文标题、关键词或研究方向…"
+                    onfocus="showSearchHistory()"
+                    oninput="if(document.getElementById('searchHistoryPanel').classList.contains('active'))showSearchHistory();"
+                    onkeydown="if(event.key==='Enter')addSearchHistory()">
+                    <span class="search-shortcut">Enter ↵</span>
+                    <button class="search-btn semantic" onclick="navigateTo('page-ai');setTimeout(()=>{$('aiInput').value='帮我搜索关于'+($('searchInput').value||'深度学习')+'的论文';setTimeout(()=>sendAiMessage(),100)},300);">AI 语义检索</button>
+                    <button class="search-btn main" onclick="addSearchHistory();showToast('已触发搜索: '+($('searchInput').value||'深度学习'),'info')">检索</button>
+                    <!-- 高级搜索入口（预留多条件检索） -->
+                    <div class="advanced-search">
+                      <button class="advanced-search-btn" onclick="toggleAdvancedSearch()">高级搜索 ▾</button>
+                      <div class="advanced-search-panel" id="advancedSearchPanel">
+                        <div class="advanced-search-field">
+                          <label>关键词</label>
+                          <input type="text" placeholder="标题 / 摘要 / 关键词">
+                        </div>
+                        <div class="advanced-search-field">
+                          <label>会议 / 期刊</label>
+                          <input type="text" placeholder="如：NeurIPS、CVPR、ICLR">
+                        </div>
+                        <div class="advanced-search-field">
+                          <label>CCF 等级</label>
+                          <select>
+                            <option value="">不限</option>
+                            <option value="A">CCF-A</option>
+                            <option value="B">CCF-B</option>
+                            <option value="C">CCF-C</option>
+                          </select>
+                        </div>
+                        <div class="advanced-search-field">
+                          <label>发表年份</label>
+                          <input type="text" placeholder="如：2018-2024">
+                        </div>
+                        <div class="advanced-search-actions">
+                          <button class="btn-ghost" onclick="toggleAdvancedSearch()">取消</button>
+                          <button class="btn-primary" onclick="toggleAdvancedSearch();showToast('高级搜索（预留功能）','info')">应用筛选</button>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- 搜索历史面板 -->
+                    <div class="search-history-panel" id="searchHistoryPanel">
+                      <div class="search-history-header">
+                        <span class="search-history-title">搜索历史</span>
+                        <span class="search-history-clear" onclick="clearSearchHistory()">清空全部</span>
+                      </div>
+                      <ul class="search-history-list" id="searchHistoryList">
+                        <li class="search-history-empty">暂无搜索记录</li>
+                      </ul>
+                    </div>
                   </div>
-                  <ul class="search-history-list" id="searchHistoryList">
-                    <li class="search-history-empty">暂无搜索记录</li>
-                  </ul>
+                </div>
+                <!-- 快捷功能：低权重，弱化视觉 -->
+                <div class="hero-quick-actions">
+                  <button class="hero-quick-btn" onclick="navigateTo('page-ai');setTimeout(()=>$('aiInput')?.focus(),300);">AI 对话</button>
+                  <button class="hero-quick-btn" onclick="navigateTo('page-submit');">投稿分析</button>
+                  <button class="hero-quick-btn" onclick="navigateTo('page-library');">文献库</button>
                 </div>
               </div>
             </div>
+            <!-- 统计数据模块：图标 + 淡底色 + 单位 -->
+            <div class="stats-bar">
+              <div class="stat-card"><span class="stat-icon stat-icon-blue">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </span><span class="stat-number">128</span><span class="stat-unit">篇</span><span class="stat-label">今日更新</span></div>
+              <div class="stat-card"><span class="stat-icon stat-icon-blue">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </span><span class="stat-number">3,286</span><span class="stat-unit">人</span><span class="stat-label">活跃用户</span></div>
+              <div class="stat-card"><span class="stat-icon stat-icon-blue">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              </span><span class="stat-number">47</span><span class="stat-unit">篇</span><span class="stat-label">综述撰写</span></div>
+              <div class="stat-card"><span class="stat-icon stat-icon-blue">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </span><span class="stat-number">5</span><span class="stat-unit">条</span><span class="stat-label">截稿提醒</span></div>
+            </div>
           </div>
 
-          <!-- 统计信息栏 -->
-          <div class="stats-bar">
-            <div class="stat-card"><div class="stat-number">128</div><div class="stat-label">今日更新论文</div></div>
-            <div class="stat-card"><div class="stat-number">3,286</div><div class="stat-label">活跃科研用户</div></div>
-            <div class="stat-card"><div class="stat-number">47</div><div class="stat-label">综述撰写</div></div>
-            <div class="stat-card"><div class="stat-number">5</div><div class="stat-label">截稿提醒</div></div>
-          </div>
-
-          <!-- 每日推荐论文 -->
+          <!-- 每日推荐论文：领域筛选 + 排序按钮同一水平行 -->
           <div class="section-header">
-            <h3>📰 每日推荐论文</h3>
-            <div class="section-header-filters">
-              <span class="mini-filter active">全部</span>
-              <span class="mini-filter">CCF-A</span>
-              <span class="mini-filter">NLP</span>
-              <span class="mini-filter">CV</span>
-              <span class="mini-filter">ML</span>
+            <h3>每日推荐论文</h3>
+            <div class="section-toolbar">
+              <div class="section-header-filters">
+                <span class="mini-filter active">全部</span>
+                <span class="mini-filter">CCF-A</span>
+                <span class="mini-filter">NLP</span>
+                <span class="mini-filter">CV</span>
+                <span class="mini-filter">ML</span>
+              </div>
+              <div class="sort-tags">
+                <span class="sort-tag active">综合排序</span>
+                <span class="sort-tag">最新发表</span>
+                <span class="sort-tag">高引论文</span>
+              </div>
             </div>
           </div>
           <div class="daily-rec-grid" id="dailyRecGrid"></div>
 
-          <!-- 筛选标签栏 -->
-          <div class="filter-tags" id="filterTags">
-            <span class="filter-indicator" id="filterIndicator"></span>
-            <span class="filter-tag active">综合排序</span>
-            <span class="filter-tag">最新发表</span>
-            <span class="filter-tag">高引论文</span>
-            <span class="filter-tag">CCF-A</span>
-            <span class="filter-tag">NLP</span>
-            <span class="filter-tag">CV</span>
-          </div>
-
           <!-- 全部论文列表 -->
           <div class="section-header">
-            <h3>📚 全部论文</h3>
+            <h3>全部论文</h3>
             <span style="font-size:12px;color:var(--text-light);" id="paperCountDisplay">共 0 篇</span>
           </div>
           <div class="paper-grid" id="paperGrid"></div>
@@ -250,6 +289,14 @@
 
         <!-- ============ 界面三：投稿分析页 ============ -->
         <div class="page" id="page-submit">
+          <!-- Tab 导航栏 -->
+          <div class="sub-tab-bar" id="subTabBar">
+            <button class="sub-tab-btn active" data-tab="journals">期刊列表</button>
+            <button class="sub-tab-btn" data-tab="trends">投稿趋势图</button>
+            <button class="sub-tab-btn" data-tab="graph">文献知识图谱</button>
+          </div>
+          <!-- 投稿分析主视图（期刊列表 / 趋势图切换显示由 JS 控制） -->
+          <div class="sub-main-view" id="subMainView">
           <div class="sub-layout-new">
             <!-- 左侧：投稿分析区 -->
             <div class="sub-left-new">
@@ -305,6 +352,32 @@
                   <input placeholder="输入您的问题..." id="subChatInput" onkeydown="if(event.key==='Enter')sendSubChat()">
                   <button onclick="sendSubChat()">&#10148;</button>
                 </div>
+              </div>
+            </div>
+          </div>
+          </div><!-- /sub-main-view -->
+          <!-- 文献知识图谱容器（默认隐藏） -->
+          <div class="graph-container" id="graphContainer" style="display:none;">
+            <div class="graph-left-panel" id="graphLeftPanel">
+              <div class="graph-group">
+                <div class="graph-group-title">Origin Paper</div>
+                <div class="graph-paper-list" id="graphOriginList"></div>
+              </div>
+              <div class="graph-group">
+                <div class="graph-group-title">Prior Works</div>
+                <div class="graph-paper-list" id="graphPriorList"></div>
+              </div>
+              <div class="graph-group">
+                <div class="graph-group-title">Derivative Works</div>
+                <div class="graph-paper-list" id="graphDerivList"></div>
+              </div>
+            </div>
+            <div class="graph-canvas-wrap" id="graphCanvasWrap">
+              <div class="graph-canvas-inner" id="graphCanvas"></div>
+            </div>
+            <div class="graph-right-panel" id="graphRightPanel">
+              <div class="graph-detail-card" id="graphDetailCard">
+                <p style="color:var(--text-light);text-align:center;padding:40px 0;">点击节点查看论文详情</p>
               </div>
             </div>
           </div>
@@ -549,6 +622,7 @@
         <button class="btn" onclick="downloadPdf()">&#128229; 下载PDF</button>
         <button class="btn" onclick="exportReadingCitation()">&#128221; 导出引用</button>
         <button class="btn" onclick="shareReadingPaper()">&#128228; 分享</button>
+        <button class="btn" onclick="openGraphFromReading()">&#128250; 引用图谱</button>
       </div>
     </div>
 
@@ -771,6 +845,14 @@
     <!-- 外部脚本 -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4/build/pdf.min.js"></script>
-    <script src="js/app.js" defer></script>
+    <!-- 业务脚本 —— 按依赖顺序加载，全部 defer 以保证文档解析完成后按序执行 -->
+    <script src="js/utils.js?v=8" defer></script>
+    <script src="js/api.js?v=8" defer></script>
+    <script src="js/markdown.js?v=8" defer></script>
+    <script src="js/search.js?v=8" defer></script>
+    <script src="js/ai-chat.js?v=8" defer></script>
+    <script src="js/library.js?v=8" defer></script>
+    <script src="js/reading.js?v=8" defer></script>
+    <script src="js/app.js?v=8" defer></script>
   </body>
 </html>

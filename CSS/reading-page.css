@@ -1,0 +1,512 @@
+/**
+ * reading-page.css — 独立全屏论文阅读页样式
+ *
+ * 取代原有的右侧抽屉弹窗，提供完整的全视口阅读体验。
+ * 布局：顶部导航栏 + 左右双栏主体 + 底部操作栏
+ */
+
+/* ============ 页面容器 ============ */
+
+.reading-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-light, #F7F8FA);
+  font-family: var(--font-cn);
+}
+
+/* ============ 顶部导航栏 ============ */
+
+.reading-navbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  background: var(--card-white);
+  border-bottom: 1px solid #E5E8EF;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* 返回按钮 */
+.reading-nav-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--bg-light);
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  color: var(--text-mid);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.reading-nav-back:hover {
+  background: #E5E8EF;
+  color: var(--text-dark);
+}
+
+/* 标题置中 */
+.reading-nav-title {
+  flex: 1;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-dark);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 右侧功能标签 */
+.reading-nav-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.reading-nav-tab {
+  padding: 7px 18px;
+  background: transparent;
+  border: none;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-family: var(--font-cn);
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.reading-nav-tab:hover {
+  background: var(--bg-light);
+  color: var(--text-dark);
+}
+.reading-nav-tab.active {
+  background: var(--brand-blue);
+  color: #fff;
+}
+
+/* ============ 主体区域：左右双栏 ============ */
+
+.reading-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* 左栏：论文正文（60%） */
+.reading-left {
+  flex: 0 0 60%;
+  overflow-y: auto;
+  background: #F3F4F6;
+  padding: 0;
+}
+
+.reading-pdf-wrap {
+  min-height: 100%;
+  max-width: 800px;
+  margin: 24px auto;
+  padding: 40px 48px;
+  background: var(--card-white);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* PDF 内容样式（与原有 reading.css 保持一致） */
+.rpage-pdf-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-dark);
+}
+
+.rpage-pdf-meta {
+  font-size: 13px;
+  color: var(--text-light);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.rpage-pdf-section {
+  margin-bottom: 20px;
+}
+
+.rpage-pdf-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text-dark);
+}
+
+.rpage-pdf-section p {
+  font-size: 13px;
+  color: var(--text-mid);
+  line-height: 1.75;
+  margin-bottom: 10px;
+}
+
+.rpage-pdf-section .formula {
+  display: block;
+  padding: 14px;
+  margin: 10px 0;
+  background: var(--bg-light);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-en);
+  font-size: 14px;
+  color: var(--brand-purple, #7C3AED);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rpage-pdf-section .formula:hover {
+  background: #EEF2FF;
+  border-color: var(--brand-blue);
+}
+
+/* 阅读进度条 */
+.rpage-progress-wrap {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  height: 3px;
+  background: transparent;
+}
+.rpage-progress-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--brand-blue);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.1s linear;
+}
+
+/* 右栏：信息侧边栏（40%） */
+.reading-right {
+  flex: 0 0 40%;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-white);
+  border-left: 1px solid #E5E8EF;
+  overflow: hidden;
+}
+
+/* 右侧子标签栏 */
+.rpage-ai-tabs {
+  display: flex;
+  border-bottom: 1px solid #E5E8EF;
+  flex-shrink: 0;
+}
+.rpage-ai-tab {
+  flex: 1;
+  padding: 10px 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
+  font-family: var(--font-cn);
+  font-weight: 500;
+  color: var(--text-mid);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.rpage-ai-tab:hover {
+  background: var(--bg-light);
+}
+.rpage-ai-tab.active {
+  color: var(--brand-blue);
+  border-bottom-color: var(--brand-blue);
+}
+
+/* 右侧内容区 */
+.rpage-ai-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-mid);
+}
+
+/* 右侧底栏输入区 */
+.rpage-ai-input {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #E5E8EF;
+  flex-shrink: 0;
+}
+.rpage-ai-input input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid #E5E8EF;
+  border-radius: 6px;
+  outline: none;
+  font-size: 13px;
+  font-family: var(--font-cn);
+  color: var(--text-dark);
+  background: var(--bg-light);
+}
+.rpage-ai-input input:focus {
+  border-color: var(--brand-blue);
+  background: #fff;
+}
+.rpage-ai-input button {
+  width: 38px;
+  height: 38px;
+  background: var(--brand-blue);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.rpage-ai-input button:hover {
+  background: #0E42D2;
+}
+
+/* ============ 底部操作栏 ============ */
+
+.rpage-bottombar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 24px;
+  background: var(--card-white);
+  border-top: 1px solid #E5E8EF;
+  flex-shrink: 0;
+}
+
+.rpage-bottombar .rpage-btn {
+  padding: 7px 18px;
+  background: transparent;
+  border: 1px solid #E5E8EF;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: var(--font-cn);
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.rpage-bottombar .rpage-btn:hover {
+  background: #EEF2FF;
+  border-color: var(--brand-blue);
+  color: var(--brand-blue);
+}
+.rpage-bottombar .rpage-btn.primary {
+  background: var(--brand-blue);
+  color: #fff;
+  border-color: var(--brand-blue);
+}
+.rpage-bottombar .rpage-btn.primary:hover {
+  background: #0E42D2;
+}
+
+/* ============ 公式弹窗（沿用 reading.css 结构） ============ */
+
+.formula-overlay {
+  z-index: 5000;
+  display: none;
+  position: fixed;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.40);
+}
+.formula-overlay.active {
+  display: flex;
+}
+
+.formula-modal {
+  width: 540px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 28px 32px;
+  background: var(--card-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.formula-modal h3 {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-dark);
+}
+.formula-modal .formula-display {
+  padding: 20px;
+  margin-bottom: 20px;
+  background: var(--bg-light);
+  border: 1px solid #EDE9FE;
+  border-radius: var(--radius-md);
+  font-family: var(--font-en);
+  font-size: 20px;
+  color: #7C3AED;
+  text-align: center;
+}
+.formula-modal .formula-section {
+  margin-bottom: 18px;
+}
+.formula-modal .formula-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--brand-blue);
+  margin-bottom: 6px;
+}
+.formula-modal .formula-section p {
+  font-size: 13px;
+  color: var(--text-mid);
+  line-height: 1.7;
+}
+.formula-modal .formula-section .variable {
+  display: inline-block;
+  padding: 0 6px;
+  background: #EEF2FF;
+  border-radius: 4px;
+  font-family: var(--font-en);
+  font-weight: 500;
+  color: var(--brand-blue);
+}
+.formula-modal .formula-close {
+  margin-top: 16px;
+  padding: 8px 24px;
+  background: var(--brand-blue);
+  border: none;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-family: var(--font-cn);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.formula-modal .formula-close:hover {
+  background: #1D4ED8;
+}
+
+/* ============ 相似论文（阅读页内） ============ */
+
+.similar-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.similar-card {
+  padding: 14px;
+  background: var(--bg-light);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.similar-card:hover {
+  border-color: var(--brand-blue);
+  background: #EFF6FF;
+}
+.similar-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+.similar-card-meta {
+  font-size: 12px;
+  color: var(--text-light);
+}
+.similar-card-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  margin-top: 6px;
+  background: #EDE9FE;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #7C3AED;
+}
+
+/* ============ 深色模式适配 ============ */
+
+[data-theme="dark"] .reading-page { background: #0A0F1A; }
+[data-theme="dark"] .reading-navbar { background: #151B28; border-bottom-color: #2A2F3E; }
+[data-theme="dark"] .reading-nav-title { color: #E2E8F0; }
+[data-theme="dark"] .reading-nav-back { background: #1E2430; color: #94A3B8; }
+[data-theme="dark"] .reading-nav-back:hover { background: #2A2F3E; color: #E2E8F0; }
+[data-theme="dark"] .reading-nav-tab:hover { background: #1E2430; color: #E2E8F0; }
+[data-theme="dark"] .reading-left { background: #0F1520; }
+[data-theme="dark"] .reading-pdf-wrap { background: #151B28; box-shadow: none; }
+[data-theme="dark"] .rpage-pdf-title { color: #E2E8F0; }
+[data-theme="dark"] .rpage-pdf-meta { color: #64748B; }
+[data-theme="dark"] .rpage-pdf-section h3 { color: #E2E8F0; }
+[data-theme="dark"] .rpage-pdf-section p { color: #94A3B8; }
+[data-theme="dark"] .rpage-pdf-section .formula { background: #1E2430; }
+[data-theme="dark"] .rpage-pdf-section .formula:hover { background: #1E293B; }
+[data-theme="dark"] .reading-right { background: #151B28; border-left-color: #2A2F3E; }
+[data-theme="dark"] .rpage-ai-tabs { border-bottom-color: #2A2F3E; }
+[data-theme="dark"] .rpage-ai-tab:hover { background: #1E2430; }
+[data-theme="dark"] .rpage-ai-content { color: #94A3B8; }
+[data-theme="dark"] .rpage-ai-input { border-top-color: #2A2F3E; }
+[data-theme="dark"] .rpage-ai-input input { background: #1E2430; border-color: #2A2F3E; color: #E2E8F0; }
+[data-theme="dark"] .rpage-ai-input input:focus { background: #1E2430; border-color: #4080FF; }
+[data-theme="dark"] .rpage-bottombar { background: #151B28; border-top-color: #2A2F3E; }
+[data-theme="dark"] .rpage-bottombar .rpage-btn { border-color: #2A2F3E; color: #94A3B8; }
+[data-theme="dark"] .rpage-bottombar .rpage-btn:hover { background: #1E2430; border-color: #4080FF; color: #4080FF; }
+
+/* ============ 响应式：平板 (< 900px) 双栏改上下堆叠 ============ */
+
+@media (max-width: 900px) {
+  .reading-main {
+    flex-direction: column;
+  }
+  .reading-left {
+    flex: 0 0 auto;
+    height: 55vh;
+  }
+  .reading-right {
+    flex: 0 0 auto;
+    height: 45vh;
+    border-left: none;
+    border-top: 1px solid #E5E8EF;
+  }
+  .reading-pdf-wrap {
+    padding: 24px 20px;
+    margin: 12px;
+  }
+  .reading-nav-tabs {
+    overflow-x: auto;
+  }
+}
+
+/* ============ 响应式：手机 (< 768px) ============ */
+
+@media (max-width: 768px) {
+  .reading-navbar {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .reading-nav-title {
+    font-size: 14px;
+  }
+  .reading-nav-tab {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .reading-left {
+    height: 50vh;
+  }
+  .reading-right {
+    height: 50vh;
+  }
+  .reading-pdf-wrap {
+    padding: 20px 14px;
+    margin: 8px;
+  }
+}

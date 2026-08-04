@@ -9,11 +9,21 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "vite build",
     "preview": "vite preview",
-    "install:server": "pip install -r server/requirements.txt"
+    "install:server": "pip install -r server/requirements.txt",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:server": "pytest tests/ -v",
+    "test:all": "vitest run && pytest tests/ -v",
+    "lint": "eslint js/ --ext .js"
   },
   "dependencies": {},
   "devDependencies": {
     "concurrently": "^8.2.0",
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "vitest": "^2.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "jsdom": "^24.0.0",
+    "eslint": "^8.57.0"
   }
 }
