@@ -157,7 +157,8 @@ function normalizeFrontendPaper(p) {
     year: p.year || 'N/A',
     keywords: Array.isArray(p.keywords) ? p.keywords : [],
     doi: p.doi || '',
-    institute: p.institute || ''
+    institute: p.institute || '',
+    relevance: p.relevance
   };
 }
 
@@ -357,6 +358,11 @@ function buildPaperCardHTML(p) {
   const citesDisplay = citesNum >= 1000 ? (citesNum / 1000).toFixed(1) + 'K' : citesNum;
   const abstract = escapeHtml((p.abstract || '').substring(0, 160));
   const keywords = (p.keywords || []).slice(0, 3).map(k => '<span class="paper-keyword">' + escapeHtml(k) + '</span>').join('');
+  // 相关度徽章：仅在检索结果带数值相关度时展示（推荐/列表无该字段时不显示）
+  let relevanceBadge = '';
+  if (typeof p.relevance === 'number' && isFinite(p.relevance)) {
+    relevanceBadge = '<span class="paper-relevance" title="相关度">相关度 ' + Math.round(p.relevance * 100) + '%</span>';
+  }
 
   return '<div class="paper-card-top">'
     + '<span class="ccf-badge level-' + ccfLevel + '">' + ccfLabel + '</span>'
@@ -370,6 +376,7 @@ function buildPaperCardHTML(p) {
     + '<div class="paper-footer">'
     + '<span class="paper-cites" title="引用量">' + citesDisplay + ' 引用</span>'
     + heat
+    + relevanceBadge
     + '<span class="footer-sep"></span>'
     + '<button class="btn-action fav" data-action="fav" data-id="' + p.id + '" data-title="' + escapeHtml(p.title) + '" title="收藏">&#9825;</button>'
     + '<button class="btn-action" data-action="read" data-id="' + p.id + '">AI 阅读</button>'
