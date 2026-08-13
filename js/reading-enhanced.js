@@ -1385,20 +1385,21 @@ window.translateParagraphEnhanced = function(idx) {
   });
 };
 
-/** 通过 DeepSeek API 翻译文本 */
+/** 通过后端 /api/translate 接口翻译文本 */
 function translateTextViaApi(text, callback) {
-  if (typeof deepseekChat !== 'function') {
+  if (typeof apiFetch !== 'function') {
     callback('（翻译服务不可用）');
     return;
   }
-  var msgs = [
-    { role: 'system', content: '你是专业的学术翻译助手。请将用户提供的英文文本翻译成中文，保持学术风格，专业术语保留英文。直接给出翻译结果，不要解释。' },
-    { role: 'user', content: '请翻译以下内容：\n' + text }
-  ];
-  deepseekChat(msgs, false, { taskType: 'ai_reading' }).then(function(reply) {
-    callback(reply || '翻译失败');
-  }).catch(function() {
-    callback('翻译服务暂时不可用，请稍后重试。');
+  apiFetch('/translate', {
+    method: 'POST',
+    body: { text: text, target_lang: '中文', source_lang: null }
+  }).then(function(data) {
+    if (data && data.translated) {
+      callback(data.translated);
+    } else {
+      callback('翻译服务暂时不可用，请稍后重试。');
+    }
   });
 }
 
