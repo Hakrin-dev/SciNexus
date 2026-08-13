@@ -151,15 +151,9 @@ class ScoutAgent(BaseAgent):
         # 相关度降序（BM25 饱和分/余弦/PageRank，源端已归一化到 0..1），同分按引用数降序
         papers.sort(key=lambda p: (-p.relevance_score, -p.citation_count))
 
-        draft = {"status": "SUCCESS", "retrieved_papers": [p.model_dump() for p in papers]}
-        payload = {
-            "query": query,
-            "plan": plan.model_dump(),
-            "candidates": [p.model_dump() for p in papers],
-        }
-        output: ScoutOutput = self.generate(payload, ScoutOutput, draft)
-        # 检索结果以实际召回为准：真实 LLM 模式下 generate 会覆盖 retrieved_papers
-        # （易幻觉出 citation key 论文），强制回填工具实际召回 + 归一化后的相关度。
-        output.retrieved_papers = papers
+        # 优化：跳过第②次 LLM 生成，直接用工具实际召回结果构造 ScoutOutput。
+        # 原实现再调一次 LLM 生成 output（易幻觉出 citation key），随后又被强制
+        # 覆盖 retrieved_papers —— 那次往返对最终结果无贡献，纯浪费一次 LLM 调用。
+        output = ScoutOutput(status="SUCCESS", retrieved_papers=papers)
         wm = self.remember(state, "retrieve papers", output.model_dump(), paper_ids=[p.paper_id for p in output.retrieved_papers])
         return {"last_output": output.model_dump(), "working_memory": wm}
