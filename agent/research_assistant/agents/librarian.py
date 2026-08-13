@@ -63,20 +63,19 @@ class LibrarianAgent(BaseAgent):
         nodes.sort(key=lambda n: n.read_priority)
         read_order = [n.id for n in nodes[:5]]
 
-        # 4. 输出供前端 D3.js/ReactFlow 渲染的 Node/Edge，并推荐私域分类标签
-        draft = {
-            "status": "SUCCESS",
-            "graph_data": GraphData(nodes=nodes, edges=edges).model_dump(),
-            "tags_recommendation": [f"seed:{n.label}" for n in nodes[:3]],
-            "folder_suggestion": (
+        # 4. 输出供前端 D3.js/ReactFlow 渲染的 Node/Edge，并推荐私域分类标签。
+        #    优化：跳过第②次 LLM 生成，直接用工具扩展出的图谱 + 确定性标签构造输出，
+        #    避免 LLM 重新生成 graph_data 时幻觉/篡改节点。
+        output = LibrarianOutput(
+            status="SUCCESS",
+            graph_data=GraphData(nodes=nodes, edges=edges),
+            tags_recommendation=[f"seed:{n.label}" for n in nodes[:3]],
+            folder_suggestion=(
                 f"建议归档到「{query}」主题文件夹"
                 if nodes
                 else "未获得有效种子论文，暂不构建图谱；请先完成检索或选择论文。"
             ),
-        }
-        payload = {"query": query, "plan": plan.model_dump(),
-                   "graph_nodes": [n.model_dump() for n in nodes], "graph_edges": [e.model_dump() for e in edges]}
-        output: LibrarianOutput = self.generate(payload, LibrarianOutput, draft)
+        )
         result = output.model_dump() | {"read_order": read_order}
         wm = self.remember(state, "build research graph", result, paper_ids=[n.id for n in nodes])
         return {"last_output": result, "working_memory": wm}
