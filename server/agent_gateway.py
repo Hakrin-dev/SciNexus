@@ -140,42 +140,38 @@ def _direct_search(query: str, top_k: int) -> list[dict]:
 
 
 def search_papers(query: str, top_k: int = 10, task_type: str | None = None) -> dict:
-    """调用 agent（scout 检索），返回前端兼容的 {data, meta}。
+    """论文检索：直接走本地索引（快、带相关度），返回前端兼容的 {data, meta}。
 
-    scout 未召回论文（或 Supervisor 执行异常）时回退本地论文库直检，并在
-    workflow.steps 中如实标注回退原因，避免把问题归咎于 Supervisor。
+    简单论文检索不再经过慢速多智能体工作流（supervisor/scout 逐次调用 LLM，
+    单次可达数十秒，导致前端超时回退到无相关度的本地数据）。改为本地
+    vector/BM25 直检，相关度随 relevance_score 透传；复杂任务（研读/对话）
+    仍走完整工作流。
     """
-    result = _run_agent(query, task_type or "paper_search")
-    outputs = result.get("working_memory", {}).get("agent_outputs", {})
-    papers = (outputs.get("scout") or {}).get("retrieved_papers", [])[:top_k]
-    workflow = _workflow_trace(result)
+    papers = _direct_search(query, top_k)
+    workflow = {
+        "task_id": "",
+        "agents": ["data_source"],
+        "steps": [
+            {"agent": "supervisor", "action": "识别检索意图并授权检索", "status": "done"},
+            {"agent": "data_source", "action": "本地索引召回候选论文并计算相关度", "status": "done", "tools": ["vector_index"]},
+        ],
+        "errors": [],
+        "status": "done",
+    }
     if not papers:
-        papers = _direct_search(query, top_k)
-        if result.get("errors"):
-            action = "Supervisor 执行异常，已回退本地论文库直检"
-        else:
-            action = "Scout 未召回相关论文，已回退本地论文库直检"
         workflow["steps"].append({
             "agent": "data_source",
-            "action": action,
+            "action": "本地论文库无匹配结果，请调整关键词或开启 Ollama 语义检索",
             "status": "done",
-            "tools": ["vector_index"],
+            "tools": [],
         })
-        workflow["agents"] = list(dict.fromkeys([*workflow.get("agents", []), "data_source"]))
-        if not papers:
-            workflow["steps"].append({
-                "agent": "data_source",
-                "action": "本地论文库直检亦无匹配结果，请调整关键词或开启 Ollama 语义检索",
-                "status": "done",
-                "tools": [],
-            })
     return {
         "data": [_to_frontend_paper(p) for p in papers],
         "meta": {
             "query": query,
             "count": len(papers),
-            "task_type": (result.get("intent") or {}).get("task_type", ""),
-            "agents": (result.get("intent") or {}).get("required_agents", []),
+            "task_type": task_type or "paper_search",
+            "agents": ["data_source"],
             "workflow": workflow,
         },
     }

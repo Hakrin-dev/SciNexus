@@ -166,63 +166,37 @@ def _fake_paper() -> dict:
     }
 
 
-def _scout_empty_result(errors: list[dict]) -> dict:
-    return {
-        "task_plan": [],
-        "errors": errors,
-        "intent": {"task_id": "t1", "required_agents": ["scout"], "task_type": "paper_search"},
-        "working_memory": {"agent_outputs": {}},
-    }
-
-
-def test_search_papers_fallback_action_without_errors(monkeypatch) -> None:
+def test_search_papers_uses_direct_search(monkeypatch) -> None:
     from server import agent_gateway
 
-    monkeypatch.setattr(agent_gateway, "_run_agent", lambda *a, **k: _scout_empty_result([]))
     monkeypatch.setattr(agent_gateway, "_direct_search", lambda query, top_k: [_fake_paper()])
 
     out = agent_gateway.search_papers("transformer")
-    fallback_steps = [s for s in out["meta"]["workflow"]["steps"] if s["agent"] == "data_source"]
+    ds_steps = [s for s in out["meta"]["workflow"]["steps"] if s["agent"] == "data_source"]
 
-    assert fallback_steps[0]["action"] == "Scout 未召回相关论文，已回退本地论文库直检"
-    assert fallback_steps[0]["status"] == "done"
-    assert fallback_steps[0]["tools"] == ["vector_index"]
+    assert ds_steps[0]["action"] == "本地索引召回候选论文并计算相关度"
+    assert ds_steps[0]["status"] == "done"
+    assert ds_steps[0]["tools"] == ["vector_index"]
     assert "data_source" in out["meta"]["workflow"]["agents"]
-    # 本地直检有结果 → 不再追加"亦无匹配"步骤
-    assert len(fallback_steps) == 1
+    # 本地直检有结果 → 不再追加"无匹配"步骤
+    assert len(ds_steps) == 1
     assert out["meta"]["count"] == 1
     assert out["data"][0]["id"] == "W1"
+    assert out["meta"]["task_type"] == "paper_search"
 
 
-def test_search_papers_fallback_action_with_errors(monkeypatch) -> None:
+def test_search_papers_empty_hint_when_no_results(monkeypatch) -> None:
     from server import agent_gateway
 
-    monkeypatch.setattr(
-        agent_gateway, "_run_agent",
-        lambda *a, **k: _scout_empty_result([{"agent": "supervisor", "message": "LLM 超时"}]),
-    )
-    monkeypatch.setattr(agent_gateway, "_direct_search", lambda query, top_k: [_fake_paper()])
-
-    out = agent_gateway.search_papers("transformer")
-    fallback_steps = [s for s in out["meta"]["workflow"]["steps"] if s["agent"] == "data_source"]
-
-    assert fallback_steps[0]["action"] == "Supervisor 执行异常，已回退本地论文库直检"
-    assert fallback_steps[0]["tools"] == ["vector_index"]
-
-
-def test_search_papers_appends_empty_hint_when_direct_search_empty(monkeypatch) -> None:
-    from server import agent_gateway
-
-    monkeypatch.setattr(agent_gateway, "_run_agent", lambda *a, **k: _scout_empty_result([]))
     monkeypatch.setattr(agent_gateway, "_direct_search", lambda query, top_k: [])
 
     out = agent_gateway.search_papers("不存在的关键词")
-    fallback_steps = [s for s in out["meta"]["workflow"]["steps"] if s["agent"] == "data_source"]
+    ds_steps = [s for s in out["meta"]["workflow"]["steps"] if s["agent"] == "data_source"]
 
-    assert fallback_steps[0]["action"] == "Scout 未召回相关论文，已回退本地论文库直检"
-    assert fallback_steps[1]["action"] == "本地论文库直检亦无匹配结果，请调整关键词或开启 Ollama 语义检索"
-    assert fallback_steps[1]["status"] == "done"
-    assert fallback_steps[1]["tools"] == []
+    assert ds_steps[0]["action"] == "本地索引召回候选论文并计算相关度"
+    assert ds_steps[1]["action"] == "本地论文库无匹配结果，请调整关键词或开启 Ollama 语义检索"
+    assert ds_steps[1]["status"] == "done"
+    assert ds_steps[1]["tools"] == []
     assert "data_source" in out["meta"]["workflow"]["agents"]
     assert out["meta"]["count"] == 0
     assert out["data"] == []
