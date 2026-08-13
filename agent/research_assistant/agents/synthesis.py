@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from research_assistant.agents.base import BaseAgent
 from research_assistant.llm import LLMProvider
-from research_assistant.schemas import AnchoredText, StructuredElements, SynthesisOutput, SynthesisPlan
+from research_assistant.schemas import AnchoredText, QAAnswer, StructuredElements, SynthesisOutput, SynthesisPlan
 from research_assistant.tools import tools
 from research_assistant.tools.data_source import backend
 
@@ -25,6 +25,18 @@ SYSTEM_PROMPT = (
     "【禁止事项】\n"
     "严禁虚构论文中的实验数据或结论；不得遗漏关键的方法论细节；禁止将不同论文的内容混淆或张冠李戴；"
     "不允许使用主观臆测替代客观分析；不得忽略原文中的重要限制条件和假设。"
+)
+
+QA_SYSTEM_PROMPT = (
+    "你是研枢（YanShu）科研平台的论文精读问答助手。\n"
+    "用户会针对一篇或多篇论文提出问题，并附上论文的结构化分析摘要与检索到的证据片段。\n"
+    "请严格依据【提供的证据与结构化分析】回答用户问题：\n"
+    "\n"
+    "1. 只依据给定证据作答，严禁编造证据中不存在的数据、结论、引用或页码；\n"
+    "2. 引用证据时必须标注来源（chunk_id / 页码），例如「（p1·第3页·p1-p3-c2）」；\n"
+    "3. 若证据不足以回答，如实说明「现有证据不足以回答该问题」，并指出缺少哪方面信息；\n"
+    "4. 结合对话历史理解追问（如「它的创新点呢」「和上一篇比呢」），但结论仍只以证据为准；\n"
+    "5. 使用中文，客观、精炼、结构化，可直接展示给用户。"
 )
 
 
@@ -63,10 +75,73 @@ class SynthesisAgent(BaseAgent):
         text = (text or "").strip()
         return "" if text in {"（无摘要）", "(无摘要)", "暂无摘要"} else text
 
+    @staticmethod
+    def _evidence_snippet(item: dict, limit: int = 240) -> str:
+        snippet = (item.get("text") or "").strip().replace("\n", " ")
+        if len(snippet) > limit:
+            snippet = snippet[:limit].rstrip() + "..."
+        return snippet
+
+    def _build_qa_answer(self, state: dict, question: str, plan: SynthesisPlan,
+                         analyses: dict[str, dict], elements: StructuredElements,
+                         evidence_all: list[dict], page_note: str) -> str:
+        """生成回答用户问题的 qa_response（专门的一步生成）。
+
+        - 真实模式：LLM 严格依据证据片段 + 结构化分析作答，标注 chunk_id/页码，禁止编造；
+        - mock 模式：由实际检索到的证据片段 + 结构化分析拼装，避免模板 FAQ。
+        """
+        history = state.get("history") or []
+        qa_payload = {
+            "question": question,
+            "history": history[-8:],
+            "papers": {pid: (analyses.get(pid) or {}) for pid in plan.paper_ids},
+            "structured_elements": elements.model_dump(),
+            "evidence": evidence_all[:6],
+        }
+        if self.mock:
+            return self._mock_qa_answer(question, plan, evidence_all, analyses, page_note)
+        return self.llm.complete(QA_SYSTEM_PROMPT, qa_payload, QAAnswer).answer
+
+    def _mock_qa_answer(self, question: str, plan: SynthesisPlan, evidence_all: list[dict],
+                        analyses: dict[str, dict], page_note: str) -> str:
+        """mock 模式兜底：用实际证据与结构化分析拼装回答，而不是固定 FAQ 模板。"""
+        lines = [f"已基于证据链中 {len(plan.paper_ids)} 篇论文的证据回答你的问题：「{question}」。"]
+        if evidence_all:
+            lines.append("\n**直接证据片段**")
+            for item in evidence_all[:5]:
+                pid = item.get("paper_id", "")
+                page = item.get("page", "?")
+                cid = item.get("chunk_id", "")
+                lines.append(f"- [{pid}·第{page}页·{cid}] {self._evidence_snippet(item)}")
+        for pid, analysis in analyses.items():
+            innovation = self._usable_text(analysis.get("core_innovation", {}).get("content"))
+            methodology = self._usable_text(analysis.get("methodology", {}).get("content"))
+            experiments = self._usable_text(analysis.get("experiments", {}).get("content"))
+            limitations = self._usable_text(analysis.get("limitations", {}).get("content"))
+            lines.append(f"\n**{pid} 结构化分析**")
+            if innovation:
+                lines.append(f"- 核心创新：{innovation}")
+            if methodology:
+                lines.append(f"- 方法要点：{methodology}")
+            if experiments:
+                lines.append(f"- 实验与结果：{experiments}")
+            if limitations:
+                lines.append(f"- 局限与挑战：{limitations}")
+        if page_note and page_note != "无":
+            lines.append(f"\n关键证据位置：{page_note}")
+        return "\n".join(lines)
+
     def run(self, state: dict) -> dict:
         query = state["user_query"]
-        ev = (state.get("working_memory") or {}).get("evidence_chain_index") or {}
-        paper_ids = ev.get("paper_ids") or []
+
+        # 论文定位顺序：显式 paper_id > 证据链 > 题名/查询启发式 > 库内第一篇
+        paper_ids: list[str] = []
+        explicit_pid = state.get("paper_id")
+        if explicit_pid and backend.get_paper(explicit_pid):
+            paper_ids = [explicit_pid]
+        if not paper_ids:
+            ev = (state.get("working_memory") or {}).get("evidence_chain_index") or {}
+            paper_ids = ev.get("paper_ids") or []
         if not paper_ids:
             paper_ids = [p["paper_id"] for p in backend.papers if p.get("paper_id") and p["paper_id"] in query]
         if not paper_ids:
@@ -118,7 +193,7 @@ class SynthesisAgent(BaseAgent):
         elements = StructuredElements(
             summary=f"对 {len(plan.paper_ids)} 篇论文进行结构化精读，回答问题：「{question}」。",
             core_innovation=AnchoredText(
-                text=first_text[:500],
+                text=first_text,
                 anchor_bbox=None,
                 chunk_id=first.get("chunk_id"),
             ),
@@ -133,14 +208,12 @@ class SynthesisAgent(BaseAgent):
             ) or "## 局限\n建议重点核查论文是否报告强基线、消融实验、泛化设置和失败案例。",
         )
         page_note = "、".join(anchors) or "无"
+        # 阶段4. 问答生成：单独一步，只依据证据与结构化分析回答用户问题（见 _build_qa_answer）
+        qa_answer = self._build_qa_answer(state, question, plan, analyses, elements, evidence_all, page_note)
         draft = {
             "status": "SUCCESS",
             "structured_elements": elements.model_dump(),
-            "qa_response": (
-                f"已基于证据链中 {len(plan.paper_ids)} 篇论文完成精读并回答你的问题：「{question}」。\n"
-                f"关键证据位置：{page_note}\n"
-                "FAQ：\n- 该方向的核心创新是什么？\n- 各方法的实验设置有何异同？（见对比表）"
-            ),
+            "qa_response": qa_answer,
         }
         payload = {
             "query": query,
@@ -150,6 +223,8 @@ class SynthesisAgent(BaseAgent):
             "extracted_elements": elements.model_dump(),
         }
         output: SynthesisOutput = self.generate(payload, SynthesisOutput, draft)
+        # 问答回复以专门问答步骤的结果为准，覆盖通用生成可能不基于证据的内容
+        output.qa_response = qa_answer
         result = output.model_dump() | {"target_chunks": target_chunks, "evidence": evidence_all[:6]}
         wm = self.remember(state, "read & structure papers", result, paper_ids=list(plan.paper_ids))
         return {"last_output": result, "working_memory": wm}

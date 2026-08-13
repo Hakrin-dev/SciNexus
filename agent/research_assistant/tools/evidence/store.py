@@ -1,6 +1,6 @@
 """PDF 缓存库：SHA-256 命名、版本号、原子写入（移植自队友架构）。
 
-缓存位置：data/papers/{paper_id}/  （original.pdf / metadata.json / chunks.json / structured_summary.json）
+缓存位置：server/data/papers/{paper_id}/  （original.pdf / metadata.json / chunks.json / structured_summary.json）
 """
 from __future__ import annotations
 

@@ -93,7 +93,7 @@ def _provider() -> OpenAIChatProvider:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="批量生成论文中文研读笔记（zh 字段）")
-    parser.add_argument("--db", default="data/research.sqlite", help="SQLite 路径（相对项目根目录）")
+    parser.add_argument("--db", default="server/data/research.sqlite", help="SQLite 路径（相对项目根目录）")
     parser.add_argument("--limit", type=int, default=None, help="仅处理前 N 篇（测试用）")
     parser.add_argument("--force", action="store_true", help="重新翻译已有 zh 的论文")
     parser.add_argument("--dry-run", action="store_true", help="只打印待翻译论文，不调用 LLM")

@@ -1,4 +1,4 @@
-"""批量解析 data/pdfs 下的真实 PDF，生成结构化论文分析并写入 paper_analysis 表。
+"""批量解析 server/data/pdfs 下的真实 PDF，生成结构化论文分析并写入 paper_analysis 表。
 
 纯本地启发式处理（pypdf 文本提取 + 关键词/TF-IDF 证据检索），不调用任何 LLM。
 以 PDF 文件名的 stem（OpenAlex W-id）作为 paper_id，与 papers 表一一对应；
@@ -7,7 +7,7 @@
 幂等：第二次运行默认跳过已有分析的论文（analyzed=0）；--force 可强制重跑。
 
 用法：
-    python agent/scripts/ingest_pdfs.py                       # 默认处理 data/pdfs/*.pdf
+    python agent/scripts/ingest_pdfs.py                       # 默认处理 server/data/pdfs/*.pdf
     python agent/scripts/ingest_pdfs.py --force               # 强制重处理已有分析的论文
     python agent/scripts/ingest_pdfs.py --abstract-fallback   # 无 PDF 的论文改用摘要生成分析
     python agent/scripts/ingest_pdfs.py --limit 5 --print 1   # 测试：只处理前 5 篇并打印 1 篇分析
@@ -54,8 +54,8 @@ def _resolve_path(raw: str) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="批量解析 PDF 生成结构化论文分析并入库")
-    parser.add_argument("--db", default="data/research.sqlite", help="SQLite 路径（相对项目根目录）")
-    parser.add_argument("--pdf-dir", default="data/pdfs", help="PDF 目录（相对项目根目录）")
+    parser.add_argument("--db", default="server/data/research.sqlite", help="SQLite 路径（相对项目根目录）")
+    parser.add_argument("--pdf-dir", default="server/data/pdfs", help="PDF 目录（相对项目根目录）")
     parser.add_argument("--force", action="store_true", help="强制重新处理已有分析的论文")
     parser.add_argument("--abstract-fallback", action="store_true", help="对无 PDF 的论文用摘要生成分析")
     parser.add_argument("--limit", type=int, default=None, help="仅处理前 N 篇 PDF（测试用）")

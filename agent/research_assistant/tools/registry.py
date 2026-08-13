@@ -5,7 +5,7 @@
 - SQLite（store）：论文元数据检索 / 会议库
 - 向量索引（vector）：语义检索（Ollama embedding，词法降级）
 - networkx 图谱（graph）：引用关系扩展 / 图谱检索
-- PDF 文件（data/pdfs/）：pdf_parser 解析真实全文
+- PDF 文件（server/data/pdfs/）：pdf_parser 解析真实全文
 """
 from __future__ import annotations
 
@@ -93,49 +93,50 @@ class ToolRegistry:
         return " ".join(topics) if topics else query
 
     def _search(self, query: str, top_k: int = 10, filters: dict | None = None) -> list[dict]:
-        """vector_rag：向量语义 + SQL 关键词 混合召回。"""
+        """vector_rag：向量语义 + SQL 关键词 混合召回。
+
+        每篇论文附带 `_score` 相关度（余弦 0..1 / BM25 原始值；未命中向量的
+        SQL 论文为 0.0），按 (-_score, citation_count) 排序。`_score` 保留在返回
+        dict 上，供 scout 读取后归一化。
+        """
         filters = filters or {}
+        # 召回关键词：core_topics 宽召回；相关度打分用原始 query（不被 LLM 扩写稀释）
         kw = self._kw_query(query, filters)
         pool = {p["paper_id"]: p for p in backend.store.search(kw, top_k=top_k * 3, filters=filters)}
         # 语义命中的论文若不在 SQL 候选里也加入（只要满足过滤条件）
-        for hit in backend.vector.search(kw, top_k * 3):
+        for hit in backend.vector.search(query, top_k * 3):
             pid = hit["paper_id"]
             if pid in pool:
-                pool[pid]["_vscore"] = hit["score"]
+                pool[pid]["_score"] = hit["score"]
             else:
                 p = backend.get_paper(pid)
                 if p and self._filters_ok(p, filters):
                     p = dict(p)
-                    p["_vscore"] = hit["score"]
+                    p["_score"] = hit["score"]
                     pool[pid] = p
-
-        def rank(p: dict) -> tuple:
-            v = p.get("_vscore", 0.0)
-            kq = kw.lower()
-            kw_hit = 1.0 if kq and kq in (p.get("title", "") + p.get("abstract", "")).lower() else 0.0
-            return (v + kw_hit, p.get("citation_count", 0))
-
-        ranked = sorted(pool.values(), key=rank, reverse=True)
-        for p in ranked:
-            p.pop("_vscore", None)
+        # 未命中向量的 SQL 论文相关度为 0
+        for p in pool.values():
+            p.setdefault("_score", 0.0)
+        ranked = sorted(pool.values(), key=lambda p: (-p.get("_score", 0.0), -p.get("citation_count", 0)))
         return ranked[:top_k]
 
     def _graph_search(self, query: str, top_k: int = 10, filters: dict | None = None) -> list[dict]:
-        """graph_rag：基于引用子图的 PageRank 检索。"""
+        """graph_rag：基于引用子图的 PageRank 检索。
+
+        每篇论文附带 `_score`（PageRank ~0..1），按 (-_score, citation_count) 排序，
+        同样保留 `_score` 供 scout 读取。
+        """
         filters = filters or {}
-        kw = self._kw_query(query, filters)
-        hits = backend.graph.search(kw, top_k, filters)
+        hits = backend.graph.search(query, top_k, filters)
         results = []
         for h in hits:
             p = backend.get_paper(h["paper_id"])
             if not p or not self._filters_ok(p, filters):
                 continue
             out = dict(p)
-            out["_gscore"] = h["score"]
+            out["_score"] = h["score"]
             results.append(out)
-        results.sort(key=lambda p: -p.get("_gscore", 0.0))
-        for p in results:
-            p.pop("_gscore", None)
+        results.sort(key=lambda p: (-p.get("_score", 0.0), -p.get("citation_count", 0)))
         return results[:top_k]
 
     # ------------------------------------------------------------------ #

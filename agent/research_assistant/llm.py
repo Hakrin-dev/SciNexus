@@ -32,12 +32,23 @@ class MockProvider(LLMProvider):
         data = user_payload.get("_mock_data") or {}
         return output_model(**data)
 
+    def translate(self, text: str, target_lang: str = "中文") -> str:
+        """纯文本翻译（mock：返回占位提示，提示需配置真实 LLM）。"""
+        return f"[mock 翻译] 需配置真实 LLM（LLM_PROVIDER=openai 或 ollama）后可用。原文：{text}"
+
 
 _JSON_OBJECT_INSTRUCTION = (
     "请只输出一个合法的 JSON 对象作为最终回答，不要包含 Markdown 代码块围栏、注释或任何其他文字。"
 )
 _REPAIR_INSTRUCTION = (
     "上一条输出不是合法 JSON。请只输出一个符合要求的 JSON 对象，不要任何多余文字、不要 Markdown 代码块。"
+)
+TRANSLATE_SYSTEM_PROMPT = (
+    "你是一名专业的学术翻译助手。请将用户给出的学术文本忠实、准确地翻译为{target_lang}。"
+    "要求：\n"
+    "1. 专业名词、技术术语保留英文原文（如 Transformer、attention、BERT）；\n"
+    "2. 数学公式、LaTeX 表达式与符号保持不变；\n"
+    "3. 只输出翻译后的文本，不要任何解释、注释或 Markdown 代码块围栏。"
 )
 
 
@@ -127,6 +138,22 @@ class OpenAIChatProvider(LLMProvider):
             )
             return _parse_output(repair.choices[0].message.content, output_model)
 
+    def translate(self, text: str, target_lang: str = "中文") -> str:
+        """纯文本翻译：不传 response_format，直接返回模型译出的自然语言文本。
+
+        temperature 用 0.2 保证忠实翻译，不引入创造性改写。
+        """
+        messages = [
+            {"role": "system", "content": TRANSLATE_SYSTEM_PROMPT.format(target_lang=target_lang)},
+            {"role": "user", "content": text},
+        ]
+        resp = self._client.chat.completions.create(
+            model=self.model,
+            temperature=0.2,
+            messages=messages,
+        )
+        return (resp.choices[0].message.content or "").strip()
+
 
 class OllamaProvider(LLMProvider):
     """本地 Ollama 接入：原生 /api/chat，format 传 JSON Schema 做引导解码。
@@ -180,6 +207,38 @@ class OllamaProvider(LLMProvider):
             except Exception as e:  # JSON 解析或 schema 校验失败 -> 降级重试
                 last_error = e
         raise RuntimeError(f"Ollama 结构化输出校验失败({self.model}): {last_error}")
+
+    def translate(self, text: str, target_lang: str = "中文") -> str:
+        """纯文本翻译：不传 format 键（自然语言生成），返回模型译出的译文。"""
+        import urllib.request
+        import urllib.error
+
+        messages = [
+            {"role": "system", "content": TRANSLATE_SYSTEM_PROMPT.format(target_lang=target_lang)},
+            {"role": "user", "content": text},
+        ]
+        body = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+            "options": {"temperature": 0.2},
+        }
+        try:
+            req = urllib.request.Request(
+                f"{self.base_url}/api/chat",
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                raw = json.loads(resp.read().decode("utf-8"))
+            return (raw["message"]["content"] or "").strip()
+        except urllib.error.HTTPError as e:
+            # HTTP 层错误（如模型不存在返回 404），读取响应体给出准确提示
+            err_body = e.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Ollama 翻译请求失败 (HTTP {e.code}) {self.base_url}: {err_body or e.reason}") from e
+        except urllib.error.URLError as e:
+            # 传输层错误（如服务未启动）直接抛出以便定位
+            raise ConnectionError(f"无法连接 Ollama ({self.base_url}): {e}") from e
 
 
 def get_llm() -> LLMProvider:

@@ -34,10 +34,12 @@ try:
         search_papers as _agent_search,
         chat as _agent_chat,
         chat_with_meta as _agent_chat_with_meta,
+        translate_text as _agent_translate,
         list_papers as _agent_papers,
         get_paper as _agent_get_paper,
         recommended_papers as _agent_recommended,
         get_structured as _agent_get_structured,
+        get_fulltext as _agent_get_fulltext,
     )
 except Exception as _import_err:  # pragma: no cover
     logger = None
@@ -52,6 +54,9 @@ except Exception as _import_err:  # pragma: no cover
     def _agent_chat_with_meta(*_a, **_k):
         raise RuntimeError("agent 网关不可用")
 
+    def _agent_translate(*_a, **_k):
+        raise RuntimeError("agent 网关不可用")
+
     def _agent_papers(*_a, **_k):
         raise RuntimeError("agent 网关不可用")
 
@@ -63,6 +68,9 @@ except Exception as _import_err:  # pragma: no cover
 
     def _agent_get_structured(*_a, **_k):
         return None
+
+    def _agent_get_fulltext(*_a, **_k):
+        raise RuntimeError("agent 网关不可用")
 
 START_TIME = time.time()
 
@@ -150,7 +158,14 @@ class ChatRequest(BaseModel):
     conversation_id: Optional[str] = None   # 对话ID，为空时创建新对话
     message: Optional[str] = None           # 用户消息内容
     messages: Optional[list[dict[str, Any]]] = None  # 前端/模型对话消息数组
+    paper_id: Optional[str] = None          # 论文ID（论文问答/阅读场景定位论文）
     task_type: Optional[str] = None         # 显式 Agent 任务类型
+
+class TranslateRequest(BaseModel):
+    """学术文本翻译请求"""
+    text: str                                # 待翻译的学术文本
+    target_lang: Optional[str] = "中文"       # 目标语言
+    source_lang: Optional[str] = None        # 源语言（可选，提示模型用）
 
 class SubmissionMatchRequest(BaseModel):
     """投稿匹配请求"""
@@ -178,6 +193,37 @@ def _chat_message(req: ChatRequest) -> str:
         if item.get("role") == "user" and item.get("content"):
             return str(item["content"])
     return ""
+
+def _chat_history(req: ChatRequest) -> list[dict]:
+    """从 {messages:[...]} 构建传给 agent 的多轮历史。
+
+    排除最后一条用户消息（即当前问题），最多保留最近 12 轮；
+    system 消息只保留最近一条并置于历史开头。
+    """
+    messages = req.messages or []
+    last_user = None
+    for index in range(len(messages) - 1, -1, -1):
+        if messages[index].get("role") == "user" and messages[index].get("content"):
+            last_user = index
+            break
+    if last_user is None:
+        return []
+
+    history: list[dict] = []
+    system_msg: dict | None = None
+    for item in messages[:last_user]:
+        role = item.get("role")
+        content = str(item.get("content") or "").strip()
+        if not content:
+            continue
+        if role == "system":
+            system_msg = {"role": "system", "content": content}
+        elif role in ("user", "assistant"):
+            history.append({"role": role, "content": content})
+    if system_msg:
+        history.insert(0, system_msg)
+    # 最多保留最近 12 轮（24 条 user/assistant 消息）
+    return history[-24:]
 
 def _mock_workflow_meta(query: str, count: int, elapsed: float, mode: str = "keyword") -> dict:
     return {
@@ -319,6 +365,24 @@ def get_paper_detail(paper_id: str):
             return {"data": p}
     raise HTTPException(status_code=404, detail="论文未找到")
 
+@app.get("/api/papers/{paper_id}/fulltext")
+def get_paper_fulltext(paper_id: str):
+    """
+    根据论文 ID 获取论文全文分块（真实 PDF 原文 / 摘要 + 结构化分析回退）。
+    有 PDF 时 has_pdf=true，chunks 按页分组；否则 has_pdf=false 返回回退分块。
+    :param paper_id: 论文唯一标识
+    :return:        全文分块数据
+    :raises HTTPException 404: 论文不存在或全文不可用
+    """
+    if AGENT_ENABLED:
+        try:
+            ft = _agent_get_fulltext(paper_id)
+            if ft:
+                return {"data": ft}
+        except Exception as exc:
+            logger.warning(f"Agent 论文全文失败，回退 404: {exc}")
+    raise HTTPException(status_code=404, detail="论文未找到")
+
 # ==================== 语义搜索 ====================
 @app.post("/api/search")
 @limiter.limit("10/minute")
@@ -404,34 +468,23 @@ def get_conversation(conv_id: str):
             return {"data": c}
     raise HTTPException(status_code=404, detail="对话未找到")
 
-def _generate_chat_reply(message: str) -> str:
+def _generate_chat_reply(message: str, reason: str = "") -> str:
     """
-    根据用户消息生成 AI 对话回复（供普通接口和流式接口共用）
+    agent 不可用时的兜底回复（供普通接口和流式接口共用）。
+
+    不伪造学术内容：仅保留真实可用的操作提示（如引导到论文搜索页），
+    其余场景统一返回服务不可用的诚实说明。
     :param message: 用户输入的消息
+    :param reason: 不可用原因（异常信息或 "agent 未启用"）
     :return:        生成的 AI 回复文本
     """
-    msg_lower = message.lower()
-
-    if "综述" in message:
-        reply = f"好的！我将为您撰写关于「{message.replace('帮我写','').replace('的','').replace('综述','').strip()}」的文献综述。\n\n**综述大纲**\n1. 研究背景\n2. 核心技术\n3. 代表性工作\n4. 对比分析\n5. 未来展望\n\n正在生成…"
-    elif "推荐" in message or "找" in message:
-        reply = "为您检索到以下相关论文：\n\n1. **Attention Is All You Need** (Vaswani et al., NeurIPS 2017) — 引用98,700+\n2. **BERT** (Devlin et al., NAACL 2019) — 引用65,200+\n3. **GPT-3** (Brown et al., NeurIPS 2020) — 引用42,500+\n\n点击论文标题可查看详情。"
-    elif "润色" in message or "修改" in message:
-        reply = "好的，请将需要润色的段落粘贴到对话中，我将从语法、流畅度、学术风格三个方面进行优化。"
-    elif "对比" in message or "比较" in message:
-        reply = "好的，我来为您做对比分析。请告诉我需要对比哪些方法或模型？"
-    elif "投稿" in message or "会议" in message:
-        reply = "根据您的研究方向，我推荐以下会议：\n1. ACL（顶会） - 匹配度 88%\n2. EMNLP - 匹配度 76%\n3. NeurIPS - 匹配度 85%\n\n建议优先考虑ACL，详细投稿策略请切换到投稿分析页面查看。"
-    else:
-        replies = [
-            "这是一个很好的问题！让我从学术角度为您分析…",
-            "根据相关文献，这个研究方向的最新进展是…",
-            f"关于「{message}」，我检索到相关论文{random.randint(3,8)}篇，为您整理如下…",
-            "让我想想… 从方法论角度，这个问题可以从以下几个方面展开…",
-        ]
-        reply = random.choice(replies)
-
-    return reply
+    reason = reason or "agent 未启用"
+    if any(token in message for token in ("找", "推荐", "检索", "搜索")):
+        return (
+            "论文检索需要智能体服务在线，当前智能体服务不可用。"
+            "您仍可使用页面上的论文搜索功能查看论文列表。"
+        )
+    return f"智能体服务暂时不可用：{reason}，请稍后重试或检查后端配置。"
 
 @app.post("/api/chat")
 @limiter.limit("30/minute")
@@ -448,21 +501,35 @@ async def chat_endpoint(req: ChatRequest, request: Request):
     logger.info(f"Chat: conv={req.conversation_id}, msg_len={len(message)}")
     if AGENT_ENABLED:
         try:
-            result = _agent_chat_with_meta(message, task_type=req.task_type)
+            result = _agent_chat_with_meta(
+                message,
+                task_type=req.task_type,
+                paper_id=req.paper_id,
+                history=_chat_history(req),
+            )
             reply = result["reply"]
-            return {"reply": reply, "conversation_id": req.conversation_id or "new", "tokens": len(reply), "workflow": result["workflow"]}
+            return {
+                "reply": reply,
+                "conversation_id": req.conversation_id or "new",
+                "tokens": len(reply),
+                "workflow": result["workflow"],
+                "generated_files": result["generated_files"],
+            }
         except Exception as exc:
             logger.warning(f"Agent 对话失败，回退 mock: {exc}")
+            return _chat_impl(ChatRequest(conversation_id=req.conversation_id, message=message), reason=str(exc))
     return _chat_impl(ChatRequest(conversation_id=req.conversation_id, message=message))
 
-def _chat_impl(req: ChatRequest):
-    """AI 对话核心实现：生成回复并一次性返回"""
-    reply = _generate_chat_reply(req.message)
+def _chat_impl(req: ChatRequest, reason: str = ""):
+    """AI 对话核心实现（agent 不可用时的兜底）：生成诚实回复并一次性返回"""
+    reply = _generate_chat_reply(req.message, reason=reason)
 
     return {
         "reply": reply,
         "conversation_id": req.conversation_id or "new",
-        "tokens": len(reply)
+        "tokens": len(reply),
+        "workflow": None,
+        "generated_files": None,
     }
 
 @app.post("/api/chat/stream")
@@ -477,21 +544,34 @@ async def chat_stream(req: ChatRequest):
         raise HTTPException(status_code=400, detail="消息不能为空")
     if AGENT_ENABLED:
         try:
-            result = _agent_chat_with_meta(message, task_type=req.task_type)
+            result = _agent_chat_with_meta(
+                message,
+                task_type=req.task_type,
+                paper_id=req.paper_id,
+                history=_chat_history(req),
+            )
             reply = result["reply"]
             workflow = result["workflow"]
+            generated_files = result["generated_files"]
         except Exception as exc:
             logger.warning(f"Agent 对话失败，回退 mock: {exc}")
-            reply = _generate_chat_reply(message)
+            reply = _generate_chat_reply(message, reason=str(exc))
             workflow = None
+            generated_files = None
     else:
         reply = _generate_chat_reply(message)
         workflow = None
+        generated_files = None
 
     async def event_generator() -> AsyncGenerator[str, None]:
-        # 先发送对话元信息
+        # 先发送对话元信息（含生成文件列表，便于右侧编辑区展示）
         conv_id = req.conversation_id or "new"
-        meta = {"conversation_id": conv_id, "tokens": len(reply), "workflow": workflow}
+        meta = {
+            "conversation_id": conv_id,
+            "tokens": len(reply),
+            "workflow": workflow,
+            "generated_files": generated_files,
+        }
         yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
 
         # 长回复按小块发送，避免代码/文档生成时右侧编辑区长时间空白。
@@ -516,7 +596,80 @@ async def chat_stream(req: ChatRequest):
         }
     )
 
-# ==================== 投稿分析 ====================
+# ==================== 学术文本翻译 ====================
+def _validate_translate_text(req: TranslateRequest) -> str:
+    """翻译接口共用校验：非空 + 长度上限，返回清洗后的文本。"""
+    text = (req.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="文本不能为空")
+    if len(text) > 8000:
+        raise HTTPException(status_code=400, detail="文本过长")
+    return text
+
+def _agent_translate_or_raise(text: str, req: TranslateRequest) -> str:
+    """调用 agent 翻译；不可用/异常时抛出 502，让前端能如实展示错误。"""
+    if not AGENT_ENABLED:
+        raise HTTPException(status_code=502, detail="翻译服务暂时不可用：agent 未启用")
+    try:
+        return _agent_translate(text, req.target_lang, req.source_lang)
+    except Exception as exc:
+        logger.error(f"翻译服务异常: {exc}")
+        raise HTTPException(status_code=502, detail=f"翻译服务暂时不可用：{exc}") from exc
+
+@app.post("/api/translate")
+@limiter.limit("30/minute")
+async def translate_endpoint(req: TranslateRequest, request: Request):
+    """
+    学术文本翻译（一次性返回完整译文，限流：30次/分钟）
+    :param req:     翻译请求体
+    :param request: FastAPI Request 对象（限流器需要）
+    :return:        译文与目标语言
+    """
+    text = _validate_translate_text(req)
+    logger.info(f"Translate: target={req.target_lang}, len={len(text)}")
+    translated = _agent_translate_or_raise(text, req)
+    return {"translated": translated, "target_lang": req.target_lang}
+
+@app.post("/api/translate/stream")
+async def translate_stream(req: TranslateRequest):
+    """
+    学术文本翻译流式接口（SSE 分块发送译文，模拟打字效果）
+    :param req: 翻译请求体
+    :return:    SSE 流式响应，包含 meta 事件、分块 data 事件和 done 终止事件
+    """
+    text = _validate_translate_text(req)
+    logger.info(f"Translate stream: target={req.target_lang}, len={len(text)}")
+    translated = _agent_translate_or_raise(text, req)
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        # 先发送翻译元信息
+        meta = {
+            "target_lang": req.target_lang,
+            "tokens": len(translated),
+        }
+        yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
+
+        # 长译文按小块发送，模拟打字效果
+        chunk_size = 12 if len(translated) > 800 else 1
+        for i in range(0, len(translated), chunk_size):
+            chunk = translated[i : i + chunk_size]
+            payload = json.dumps({"choices": [{"delta": {"content": chunk}}]}, ensure_ascii=False)
+            yield f"data: {payload}\n\n"
+            delay = 0.006 if chunk_size > 1 else random.uniform(0.03, 0.06)
+            await asyncio.sleep(delay)
+
+        # 发送流结束信号
+        yield "event: done\ndata: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 @app.get("/api/journals")
 def get_journals(sort_by: str = Query("match")):
     """

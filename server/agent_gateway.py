@@ -17,8 +17,12 @@ if str(AGENT_DIR) not in sys.path:
 AGENT_ENABLED = os.getenv("AGENT_ENABLED", "true").lower() not in ("0", "false", "no")
 
 
-def _run_agent(user_query: str, task_type: str | None = None) -> dict:
-    """运行一次 agent 工作流，返回完整 result 状态。"""
+def _run_agent(user_query: str, task_type: str | None = None,
+               paper_id: str | None = None, history: list[dict] | None = None) -> dict:
+    """运行一次 agent 工作流，返回完整 result 状态。
+
+    paper_id/history 传入初始状态：synthesis 等 agent 据此定位论文并保持多轮上下文。
+    """
     from research_assistant.graph import build_graph  # noqa: PLC0415
 
     graph = build_graph(checkpoint=False)
@@ -31,6 +35,10 @@ def _run_agent(user_query: str, task_type: str | None = None) -> dict:
             "agent_outputs": {},
         },
     }
+    if paper_id:
+        initial["paper_id"] = paper_id
+    if history:
+        initial["history"] = history
     if task_type:
         initial["raw_input"] = {"task_type": task_type}
     return graph.invoke(initial)
@@ -62,6 +70,11 @@ def _to_frontend_paper(p: dict, structured: dict | None = None) -> dict:
         "doi": p.get("doi"),
         "institute": p.get("institute"),
     }
+    # 相关度 0..1：仅当论文经过检索（内部带 relevance_score 键）时透传，
+    # 推荐/列表等未检索场景保持无 relevance 字段。
+    rs = p.get("relevance_score")
+    if rs is not None:
+        result["relevance"] = round(float(rs), 4)
     if structured is not None:
         result["structured"] = structured
     return result
@@ -100,39 +113,62 @@ def _workflow_trace(result: dict) -> dict:
 
 
 def _direct_search(query: str, top_k: int) -> list[dict]:
-    """Supervisor/LLM 不可用时，直接使用已初始化的数据后端检索。"""
+    """Supervisor/LLM 不可用时，直接使用已初始化的数据后端检索（附相关度）。"""
     from research_assistant.tools.data_source import backend  # noqa: PLC0415
+    from research_assistant.tools.text_utils import tokenize_query  # noqa: PLC0415
 
     by_id = {p["paper_id"]: p for p in backend.papers}
-    ranked_ids = [h["paper_id"] for h in backend.vector.search(query, top_k)]
-    papers = [by_id[pid] for pid in ranked_ids if pid in by_id]
+    hits = backend.vector.search(query, top_k)
+    papers: list[dict] = []
+    for h in hits:
+        p = by_id.get(h["paper_id"])
+        if p:
+            p = dict(p)
+            p["relevance_score"] = float(h["score"])
+            papers.append(p)
     if papers:
         return papers[:top_k]
 
-    q = query.lower()
+    tokens = tokenize_query(query)
     fallback = []
-    for p in backend.papers:
-        blob = " ".join([p.get("title", ""), p.get("abstract", ""), " ".join(p.get("keywords", []))]).lower()
-        if any(token and token in blob for token in q.split()):
-            fallback.append(p)
+    if tokens:
+        for p in backend.papers:
+            blob = " ".join([p.get("title", ""), p.get("abstract", ""), " ".join(p.get("keywords", []))]).lower()
+            if any(t in blob for t in tokens):
+                fallback.append(p)
     return fallback[:top_k]
 
 
 def search_papers(query: str, top_k: int = 10, task_type: str | None = None) -> dict:
-    """调用 agent（scout 检索），返回前端兼容的 {data, meta}。"""
+    """调用 agent（scout 检索），返回前端兼容的 {data, meta}。
+
+    scout 未召回论文（或 Supervisor 执行异常）时回退本地论文库直检，并在
+    workflow.steps 中如实标注回退原因，避免把问题归咎于 Supervisor。
+    """
     result = _run_agent(query, task_type or "paper_search")
     outputs = result.get("working_memory", {}).get("agent_outputs", {})
     papers = (outputs.get("scout") or {}).get("retrieved_papers", [])[:top_k]
     workflow = _workflow_trace(result)
     if not papers:
         papers = _direct_search(query, top_k)
+        if result.get("errors"):
+            action = "Supervisor 执行异常，已回退本地论文库直检"
+        else:
+            action = "Scout 未召回相关论文，已回退本地论文库直检"
         workflow["steps"].append({
             "agent": "data_source",
-            "action": "Supervisor 不可用或无结果，直接查询已加载论文库",
+            "action": action,
             "status": "done",
             "tools": ["vector_index"],
         })
         workflow["agents"] = list(dict.fromkeys([*workflow.get("agents", []), "data_source"]))
+        if not papers:
+            workflow["steps"].append({
+                "agent": "data_source",
+                "action": "本地论文库直检亦无匹配结果，请调整关键词或开启 Ollama 语义检索",
+                "status": "done",
+                "tools": [],
+            })
     return {
         "data": [_to_frontend_paper(p) for p in papers],
         "meta": {
@@ -145,18 +181,56 @@ def search_papers(query: str, top_k: int = 10, task_type: str | None = None) -> 
     }
 
 
-def chat(message: str, task_type: str | None = None) -> str:
+def _extract_generated_files(result: dict) -> list[dict] | None:
+    """从 writer / code_assistant 最终输出提取生成文件列表。
+
+    返回 [{path, language, content}]；工作流未产生任何文件时返回 None。
+    """
+    outputs = (result.get("working_memory") or {}).get("agent_outputs") or {}
+    for agent in ("writer", "code_assistant"):
+        out = outputs.get(agent) or {}
+        files = out.get("generated_files") or []
+        if files:
+            return [
+                {
+                    "path": f.get("path", ""),
+                    "language": f.get("language", "text"),
+                    "content": f.get("content", ""),
+                }
+                for f in files
+            ]
+    return None
+
+
+def translate_text(text: str, target_lang: str = "中文", source_lang: str | None = None) -> str:
+    """学术文本翻译：调用 LLM 层的纯文本 translate()，返回译文。
+
+    source_lang 目前仅作接口占位（可提示模型源语言），实际翻译由 provider 完成。
+    """
+    from research_assistant.llm import get_llm  # noqa: PLC0415
+
+    llm = get_llm()
+    return llm.translate(text, target_lang)
+
+
+def chat(message: str, task_type: str | None = None,
+         paper_id: str | None = None, history: list[dict] | None = None) -> str:
     """调用 agent 全流程，返回 final_response 作为对话回复。"""
-    return chat_with_meta(message, task_type)["reply"]
+    return chat_with_meta(message, task_type, paper_id, history)["reply"]
 
 
-def chat_with_meta(message: str, task_type: str | None = None) -> dict:
-    """调用 agent 全流程，返回回复与前端可展示的工作流。"""
-    result = _run_agent(message, task_type)
+def chat_with_meta(message: str, task_type: str | None = None,
+                   paper_id: str | None = None, history: list[dict] | None = None) -> dict:
+    """调用 agent 全流程，返回回复、前端可展示的工作流与生成文件列表。"""
+    result = _run_agent(message, task_type, paper_id, history)
     outputs = (result.get("working_memory") or {}).get("agent_outputs") or {}
     if result.get("errors") and not outputs:
         raise RuntimeError(f"agent 工作流失败: {result.get('errors')}")
-    return {"reply": result.get("final_response") or "（agent 未产生回复）", "workflow": _workflow_trace(result)}
+    return {
+        "reply": result.get("final_response") or "（agent 未产生回复）",
+        "workflow": _workflow_trace(result),
+        "generated_files": _extract_generated_files(result),
+    }
 
 
 def list_papers(page: int = 1, page_size: int = 10) -> dict:
@@ -215,6 +289,60 @@ def get_structured(paper_id: str) -> dict | None:
             store.close()
     except Exception:
         return None
+
+
+def _fulltext_chunk_key(c: dict) -> tuple[int, int]:
+    """全文分块排序键：先页码，再 chunk_id 中的序号。
+
+    chunk_id 形如 {paper_id}-p{page}-c{seq}；用数值序号而非字符串比较，
+    避免同一页内 c10/c11 排到 c2 之前导致正文乱序。
+    """
+    page = int(c.get("page", 1) or 1)
+    cid = str(c.get("chunk_id", "") or "")
+    seq = 0
+    if "-c" in cid:
+        try:
+            seq = int(cid.rsplit("-c", 1)[1])
+        except ValueError:
+            seq = 0
+    return (page, seq)
+
+
+def get_fulltext(paper_id: str) -> dict | None:
+    """论文全文分块：有真实 PDF 时返回全文（不截断），否则回退摘要 + 结构化分析分块。
+
+    返回 {paper_id, has_pdf, source, chunks}；chunks 按 (页码, 序号) 排序，
+    每项含 chunk_id/page/text（剔除 bbox 等无关字段）。论文不存在时返回 None。
+    """
+    from research_assistant.tools.data_source import backend, DATA_DIR  # noqa: PLC0415
+    from research_assistant.tools.pdf import parse_pdf  # noqa: PLC0415
+
+    if backend.get_paper(paper_id) is None and not _paper_in_mock_library(paper_id):
+        return None
+    result = parse_pdf(paper_id, pdf_dir=DATA_DIR / "pdfs", max_chunks=None)
+    source = result.get("source", "")
+    has_pdf = source not in ("", "abstract_fallback", "analysis_fallback")
+    chunks = [
+        {
+            "chunk_id": c.get("chunk_id", ""),
+            "page": c.get("page", 1),
+            "text": c.get("text", ""),
+        }
+        for c in sorted(result.get("chunks", []), key=_fulltext_chunk_key)
+    ]
+    return {"paper_id": paper_id, "has_pdf": has_pdf, "source": source, "chunks": chunks}
+
+
+def _paper_in_mock_library(paper_id: str) -> bool:
+    """论文是否存在于 server mock 论文库（p1-p11 等未入库 agent 后端的演示论文）。
+
+    get_paper_detail 同样在 agent 后端查不到时回退到 mock PAPERS，全文查询保持一致。
+    """
+    try:
+        from server.data.mock_data import PAPERS  # noqa: PLC0415
+    except Exception:
+        return False
+    return any(p.get("id") == paper_id for p in PAPERS)
 
 
 def venue_stats() -> dict:

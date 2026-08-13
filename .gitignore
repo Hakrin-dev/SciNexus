@@ -42,10 +42,9 @@ pnpm-lock.yaml
 *.duckdb
 
 # ===== 运行时生成的数据 / 本地资源 =====
-data/research.sqlite
-data/pdfs/
-data/embeddings.json
-data/papers/
+server/data/pdfs/
+server/data/embeddings.json
+server/data/papers/
 
 # ===== 上传 / 用户数据 =====
 uploads/
@@ -114,4 +113,5 @@ docker-compose.override.yml
 深知产品设计方案.docx
 .omo/
 .playwright-mcp/
+SKILLS.md
 task.md

@@ -43,7 +43,7 @@ python -m uvicorn server.main:app --port 8000
    python agent/scripts/ingest_openalex.py --query "large language model" --limit 100
    ```
 
-   写入 `data/research.sqlite`（100 篇；OpenAlex 不提供"创新点/实验数据"，这些字段由 PDF 结构化分析生成）。
+   写入 `server/data/research.sqlite`（100 篇；OpenAlex 不提供"创新点/实验数据"，这些字段由 PDF 结构化分析生成）。
 
 2. **配置数据源**：编辑 `agent/.env`（模板见 `agent/.env.example`）设置
    `TOOL_DATA_SOURCE=sqlite`，或启动前设置环境变量 `TOOL_DATA_SOURCE=sqlite`。
@@ -55,7 +55,7 @@ python -m uvicorn server.main:app --port 8000
    python agent/scripts/ingest_pdfs.py
    ```
 
-   处理 `data/pdfs/` 下与 sqlite 论文 ID 匹配的 PDF，写入 `paper_analysis` 表（幂等，可重复执行）。
+   处理 `server/data/pdfs/` 下与 sqlite 论文 ID 匹配的 PDF，写入 `paper_analysis` 表（幂等，可重复执行）。
 
 4. **验证**：`curl http://localhost:8000/api/papers?page_size=3` 应返回 `W*` 开头的真实论文
    （含摘要）；`curl http://localhost:8000/api/papers/W4384071683` 应含 `structured` 字段。

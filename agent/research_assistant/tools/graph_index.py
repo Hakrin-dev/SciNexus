@@ -10,6 +10,8 @@ from typing import Any
 
 import networkx as nx
 
+from research_assistant.tools.text_utils import tokenize_query
+
 
 class GraphIndex:
     def __init__(self, papers: list[dict]) -> None:
@@ -106,7 +108,7 @@ class GraphIndex:
     # graph_rag：关键词种子 + 子图 PageRank/度数
     # ------------------------------------------------------------------ #
     def search(self, query: str, top_k: int = 10, filters: dict | None = None) -> list[dict[str, Any]]:
-        tokens = [t for t in query.lower().replace("，", " ").replace("和", " ").split() if t]
+        tokens = tokenize_query(query)
         # 种子：标题/摘要/关键词命中
         seeds = []
         for pid, p in self._by_id.items():

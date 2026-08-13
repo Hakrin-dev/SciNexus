@@ -97,9 +97,14 @@ class ScoutAgent(BaseAgent):
 
         # 阶段2. 工具执行：并发调用 VectorRAG + GraphRAG（超时保护由工具层保证）
         top_k = 10
-        kw = " ".join(plan.core_topics) or query
-        vector_hits = tools.call("vector_rag", query=kw, top_k=top_k, filters=filters)
-        graph_hits = tools.call("graph_rag", query=kw, top_k=top_k, filters=filters)
+        # 相关度以原始 query 为准（core_topics 仅经 filters 参与宽召回），避免 LLM 扩写主题稀释相关度
+        vector_hits = tools.call("vector_rag", query=query, top_k=top_k, filters=filters)
+        graph_hits = tools.call("graph_rag", query=query, top_k=top_k, filters=filters)
+        # LLM 生成的过滤器（venue/domain/time_range）可能过度过滤导致空召回：
+        # 回退用原始 query + 无过滤器重试，保证检索始终有结果。
+        if not vector_hits and not graph_hits:
+            vector_hits = tools.call("vector_rag", query=query, top_k=top_k, filters=None)
+            graph_hits = tools.call("graph_rag", query=query, top_k=top_k, filters=None)
 
         # 阶段3. 去重排序 + 质量验证（优先数据自带 match 等级），再生成最终输出
         seen: dict[str, dict] = {}
@@ -139,11 +144,12 @@ class ScoutAgent(BaseAgent):
                     heat=heat or None,
                     match_label=hit.get("match_label"),
                     keywords=hit.get("keywords", []),
+                    relevance_score=float(hit.get("_score", 0.0)),
                 )
             )
 
-        # 匹配度降序（PERFECT > PARTIAL > WEAK），同档按引用数降序
-        papers.sort(key=lambda p: ({"PERFECT": 0, "PARTIAL": 1, "WEAK": 2}[p.match_level], -p.citation_count))
+        # 相关度降序（BM25 饱和分/余弦/PageRank，源端已归一化到 0..1），同分按引用数降序
+        papers.sort(key=lambda p: (-p.relevance_score, -p.citation_count))
 
         draft = {"status": "SUCCESS", "retrieved_papers": [p.model_dump() for p in papers]}
         payload = {
@@ -152,5 +158,8 @@ class ScoutAgent(BaseAgent):
             "candidates": [p.model_dump() for p in papers],
         }
         output: ScoutOutput = self.generate(payload, ScoutOutput, draft)
+        # 检索结果以实际召回为准：真实 LLM 模式下 generate 会覆盖 retrieved_papers
+        # （易幻觉出 citation key 论文），强制回填工具实际召回 + 归一化后的相关度。
+        output.retrieved_papers = papers
         wm = self.remember(state, "retrieve papers", output.model_dump(), paper_ids=[p.paper_id for p in output.retrieved_papers])
         return {"last_output": output.model_dump(), "working_memory": wm}

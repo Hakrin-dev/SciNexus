@@ -5,7 +5,7 @@ import re
 
 from research_assistant.agents.base import BaseAgent
 from research_assistant.llm import LLMProvider
-from research_assistant.schemas import ClaimEvidence, GeneratedFile, WrittenContent, WriterOutput, WriterPlan
+from research_assistant.schemas import ClaimEvidence, GeneratedFile, ReviewMarkdown, WrittenContent, WriterOutput, WriterPlan
 from research_assistant.tools import tools
 from research_assistant.tools.data_source import backend
 
@@ -27,6 +27,25 @@ SYSTEM_PROMPT = (
     "【禁止事项】\n"
     "严禁虚构任何参考文献、作者或 DOI 编号；不得抄袭他人作品而不正确引用；禁止使用歧视性、偏见性或"
     "不当语言；不允许夸大研究成果的实际意义；不得违反目标会议的匿名投稿规则。"
+)
+
+REVIEW_SYSTEM_PROMPT = (
+    "你是一位学术写作专家，负责撰写一篇完整的「文献综述」Markdown 文档。\n"
+    "用户会提供综述主题与一批论文（标题/作者/年份/会议/摘要），每篇以 [pid] 标注。\n"
+    "\n"
+    "要求：\n"
+    "1. 严格依据提供的论文摘要与题名撰写，严禁虚构摘要之外的结论、数据或引用；\n"
+    "2. 综述必须包含以下章节（Markdown 二级标题）：\n"
+    "   ## 摘要\n"
+    "   ## 1. 研究背景\n"
+    "   ## 2. 代表性工作\n"
+    "   ## 3. 方法脉络\n"
+    "   ## 4. 对比分析\n"
+    "   ## 5. 未来方向\n"
+    "   ## 参考文献\n"
+    "3. 文中引用论文时使用 [pid] 标记（例如 Attention Is All You Need [p1]），并在参考文献章节列出全部引用条目；\n"
+    "4. 采用 IEEE 风格，行文客观、严谨、专业，使用中文撰写；\n"
+    "5. 只输出 Markdown 正文本身，不要 Markdown 代码块围栏，不要多余说明文字。"
 )
 
 
@@ -68,13 +87,33 @@ class WriterAgent(BaseAgent):
             abstract = abstract[:220].rstrip() + "..."
         return f"- **{title}** [{pid}]：{abstract}"
 
-    def _build_literature_review_files(self, query: str, cited: list[str], latex: str) -> list[GeneratedFile]:
+    @staticmethod
+    def _llm_paper_blob(pid: str) -> str:
+        """供 LLM 综述生成的论文信息块：题名/作者/会议/年份 + 完整摘要，附 [pid] 标记。"""
+        paper = backend.get_paper(pid) or {}
+        title = paper.get("title") or pid
+        author = paper.get("author") or "Unknown authors"
+        year = paper.get("year") or ""
+        venue = paper.get("venue") or "Unknown venue"
+        abstract = (paper.get("abstract") or "暂无摘要。").strip().replace("\n", " ")
+        return (
+            f"- [{pid}] {author}. {title}. {venue}, {year}.\n"
+            f"  摘要: {abstract}"
+        )
+
+    def _build_literature_review_files(self, query: str, cited: list[str], latex: str,
+                                       review_md: str | None = None) -> list[GeneratedFile]:
+        """组装最终 GeneratedFile 列表（docs/*.md + paper/*.tex）。
+
+        review_md 由真实模式 LLM 生成；为 None 时（mock 模式）使用确定性模板。
+        """
         topic = self._topic_title(query)
         slug = self._topic_slug(query)
         cited = cited[:8]
         references = "\n".join(self._paper_line(pid) for pid in cited) or "- 暂无可用引用，请先完成论文检索。"
         summaries = "\n".join(self._paper_summary(pid) for pid in cited[:5]) or "- 暂无可用论文摘要。"
-        review_md = f"""# {topic}：文献综述
+        if not review_md:
+            review_md = f"""# {topic}：文献综述
 
 ## 摘要
 本文围绕“{topic}”梳理已有研究脉络，重点关注代表性方法、技术演进、实验范式与未来问题。综述基于当前论文库检索结果生成，引用条目均来自已加载数据库。
@@ -138,10 +177,22 @@ class WriterAgent(BaseAgent):
             for i, pid in enumerate(cited)
         ]
 
-        # 4. 通过 DPO 风格对齐，去除口语化表述（mock 直接对齐文本）
-        latex = tools.call("dpo_align", text=latex, style=plan.style_preference)
+        # 4. 风格对齐：mock 模式通过 dpo_align 工具打标（保持 supervisor 工具白名单一致）；
+        #    真实模式不调用该 mock 工具，IEEE/客观风格要求已折叠进 REVIEW_SYSTEM_PROMPT。
+        if self.mock:
+            latex = tools.call("dpo_align", text=latex, style=plan.style_preference)
 
-        generated_files = self._build_literature_review_files(query, cited, latex)
+        # 5. 文献综述正文：真实模式由 LLM 依据论文摘要/[pid] 引用撰写，mock 模式用确定性模板。
+        if self.mock:
+            generated_files = self._build_literature_review_files(query, cited, latex)
+        else:
+            papers = "\n\n".join(self._llm_paper_blob(pid) for pid in cited) or "（无可用论文，请先完成检索）"
+            review_md = self.llm.complete(
+                REVIEW_SYSTEM_PROMPT,
+                {"topic": self._topic_title(query), "papers": papers},
+                ReviewMarkdown,
+            ).markdown
+            generated_files = self._build_literature_review_files(query, cited, latex, review_md)
 
         content = WrittenContent(
             section_name=plan.section_type,
@@ -158,5 +209,8 @@ class WriterAgent(BaseAgent):
                 "generated_files": [file.model_dump() for file in generated_files],
             },
         )
+        # 最终生成文件以实际组装的列表为准（docs/*.md + paper/*.tex），
+        # 避免真实模式下 LLM 输出与组装文件不一致。
+        output.generated_files = generated_files
         wm = self.remember(state, "write paper draft", output.model_dump(), paper_ids=cited)
         return {"last_output": output.model_dump(), "working_memory": wm}

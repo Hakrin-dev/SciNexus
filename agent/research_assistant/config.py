@@ -11,10 +11,18 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 
+def _default_llm_provider() -> str:
+    """LLM provider 默认逻辑：LLM_PROVIDER 显式设置优先；
+    否则配置了 OPENAI_API_KEY 时用 openai；否则回退 mock。"""
+    if os.getenv("LLM_PROVIDER"):
+        return os.getenv("LLM_PROVIDER", "")
+    return "openai" if os.getenv("OPENAI_API_KEY") else "mock"
+
+
 @dataclass
 class Settings:
     # llm_provider: mock | openai | ollama
-    llm_provider: str = field(default_factory=lambda: os.getenv("LLM_PROVIDER", "mock"))
+    llm_provider: str = field(default_factory=_default_llm_provider)
     openai_api_key: str = field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
     openai_base_url: str = field(default_factory=lambda: os.getenv("OPENAI_BASE_URL", ""))
     llm_model: str = field(default_factory=lambda: os.getenv("LLM_MODEL", "gpt-4o"))
@@ -30,7 +38,7 @@ class Settings:
     )
 
     # Supervisor 是控制平面，可配置为比业务 agent 更强的独立模型。未设置时继承通用 LLM 配置。
-    supervisor_llm_provider: str = field(default_factory=lambda: os.getenv("SUPERVISOR_LLM_PROVIDER", os.getenv("LLM_PROVIDER", "mock")))
+    supervisor_llm_provider: str = field(default_factory=lambda: os.getenv("SUPERVISOR_LLM_PROVIDER", _default_llm_provider()))
     supervisor_openai_api_key: str = field(default_factory=lambda: os.getenv("SUPERVISOR_OPENAI_API_KEY", os.getenv("OPENAI_API_KEY", "")))
     supervisor_openai_base_url: str = field(default_factory=lambda: os.getenv("SUPERVISOR_OPENAI_BASE_URL", os.getenv("OPENAI_BASE_URL", "")))
     supervisor_llm_model: str = field(default_factory=lambda: os.getenv("SUPERVISOR_LLM_MODEL", os.getenv("LLM_MODEL", "gpt-4o")))
@@ -52,11 +60,11 @@ class Settings:
     top_k: int = int(os.getenv("TOP_K", "10"))
 
     # ---- 数据层（后端知识库）----
-    # 数据源：server_mock（server/data/mock_data.py，默认）/ json（data/papers.json）/ sqlite（data/research.sqlite，真实入库）
+    # 数据源：server_mock（server/data/mock_data.py，默认）/ json（server/data/papers.json）/ sqlite（server/data/research.sqlite，真实入库）
     tool_data_source: str = field(default_factory=lambda: os.getenv("TOOL_DATA_SOURCE", "server_mock"))
-    # json 数据源路径（可选，默认 data/papers.json）
+    # json 数据源路径（可选，默认 server/data/papers.json）
     tool_data_path: str = field(default_factory=lambda: os.getenv("TOOL_DATA_PATH", ""))
-    # SQLite 论文/会议库路径（可选，默认 data/research.sqlite）
+    # SQLite 论文/会议库路径（可选，默认 server/data/research.sqlite）
     sqlite_path: str = field(default_factory=lambda: os.getenv("SQLITE_PATH", ""))
     # 向量检索 embedding 模型（Ollama 本地；不可用自动降级词法）
     embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "nomic-embed-text"))

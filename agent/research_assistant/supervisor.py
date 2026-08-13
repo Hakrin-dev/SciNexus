@@ -510,23 +510,20 @@ def _synthesis_result_markdown(out: dict) -> list[str]:
     if elements.get("summary"):
         lines.append(f"**速读摘要**：{elements['summary']}")
     if core.get("text"):
-        text = str(core["text"]).replace("\n", " ").strip()
-        if len(text) > 500:
-            text = text[:500].rstrip() + "..."
         lines.append("")
-        lines.append(f"**核心创新证据**：{text}")
+        lines.append(f"**核心创新证据**：{str(core['text']).strip()}")
     if elements.get("methodology"):
         lines.append("")
         lines.append("**方法要点**")
-        lines.append(str(elements["methodology"])[:900])
+        lines.append(str(elements["methodology"]).strip())
     if elements.get("experimental_results"):
         lines.append("")
         lines.append("**实验与对比**")
-        lines.append(str(elements["experimental_results"])[:700])
+        lines.append(str(elements["experimental_results"]).strip())
     if elements.get("key_challenges"):
         lines.append("")
         lines.append("**局限与挑战**")
-        lines.append(str(elements["key_challenges"])[:700])
+        lines.append(str(elements["key_challenges"]).strip())
     if out.get("qa_response"):
         lines.append("")
         lines.append(str(out["qa_response"]))

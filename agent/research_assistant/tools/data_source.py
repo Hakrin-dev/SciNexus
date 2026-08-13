@@ -2,7 +2,7 @@
 
 当前数据源（mock）：
 - ServerMockSource：读取 server/data/mock_data.py（默认，字段最全：keywords/doi/year/trend）
-- JsonSource：读取 data/papers.json（备用）
+- JsonSource：读取 server/data/papers.json（备用）
 - 硬编码兜底：极简论文集（保底）
 
 统一输出「内部契约」论文 dict，并：
@@ -22,7 +22,8 @@ from pathlib import Path
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-DATA_DIR = PROJECT_ROOT / "data"
+# 后端数据统一目录：papers.json / pdfs / embeddings.json / papers 缓存 / research.sqlite 均位于此
+DATA_DIR = PROJECT_ROOT / "server" / "data"
 
 # 论文 id -> arXiv id（与 scripts/download_pdfs.py 保持一致）
 ARXIV_ID = {
@@ -197,7 +198,7 @@ class JsonSource:
 
 
 class SqliteSource:
-    """从 SQLite（data/research.sqlite）读取已入库论文；库为空则抛错触发回退。"""
+    """从 SQLite（server/data/research.sqlite）读取已入库论文；库为空则抛错触发回退。"""
 
     name = "sqlite"
 
@@ -280,9 +281,29 @@ def _load_source() -> tuple[list[dict], list[dict]]:
     return papers, _load_venues()
 
 
+def _merge_mock_papers(papers: list[dict]) -> list[dict]:
+    """把演示论文（Attention/BERT/GPT-3 等基础论文）合并进检索语料。
+
+    sqlite/json 源只含 OpenAlex 真实论文，不含这些基础论文；合并后检索才能命中
+    （它们已有 PDF 与结构化分析，paper_id 为 p1..p11，与 W* 不冲突）。
+    """
+    try:
+        mock_papers, _ = ServerMockSource().load()
+    except Exception:
+        return papers
+    existing = {p["paper_id"] for p in papers}
+    merged = list(papers)
+    for p in mock_papers:
+        if p["paper_id"] not in existing:
+            merged.append(p)
+    return merged
+
+
 def build_backend():
     """按配置加载数据源，初始化 store/vector/graph 三层索引，返回 Backend 单例。"""
     papers, venues = _load_source()
+    # 合并演示论文，让检索语料覆盖基础论文（Attention Is All You Need 等）
+    papers = _merge_mock_papers(papers)
 
     from research_assistant.tools.graph_index import GraphIndex  # noqa: PLC0415
     from research_assistant.tools.store import PaperStore  # noqa: PLC0415

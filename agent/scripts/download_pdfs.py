@@ -1,4 +1,4 @@
-"""下载 server/data/mock_data.py 中论文的 PDF 到项目 data/pdfs/ 目录。
+"""下载 server/data/mock_data.py 中论文的 PDF 到项目 server/data/pdfs/ 目录。
 
 仅下载有明确 arXiv 对应版本的论文；其余论文（综述/虚构标题）跳过。
 用法：python scripts/download_pdfs.py
@@ -29,7 +29,7 @@ ARXIV_ID = {
 
 
 def main() -> None:
-    out_dir = PROJECT_ROOT / "data" / "pdfs"
+    out_dir = PROJECT_ROOT / "server" / "data" / "pdfs"
     out_dir.mkdir(parents=True, exist_ok=True)
     for paper in PAPERS:
         pid = paper["id"]

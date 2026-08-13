@@ -26,6 +26,8 @@ class WorkingMemory(TypedDict, total=False):
 
 class WorkflowState(TypedDict, total=False):
     user_query: str
+    paper_id: str | None  # 用户显式指定的论文 ID（论文问答/阅读场景）
+    history: list[dict[str, str]]  # 对话历史 [{role, content}]，供 agent 保持上下文
     raw_input: dict[str, Any]
     intent: dict[str, Any]
     task_plan: list[dict[str, Any]]

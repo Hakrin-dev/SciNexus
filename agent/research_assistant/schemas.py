@@ -50,6 +50,7 @@ class RetrievedPaper(BaseModel):
     heat: str | None = None
     match_label: str | None = None
     keywords: list[str] = Field(default_factory=list)
+    relevance_score: float = 0.0
 
 
 class ScoutOutput(BaseModel):
@@ -91,6 +92,11 @@ class SynthesisOutput(BaseModel):
     status: Status
     structured_elements: StructuredElements
     qa_response: str
+
+
+class QAAnswer(BaseModel):
+    """问答专用小 schema：仅输出答案文本（由 Synthesis 单独一步生成）。"""
+    answer: str
 
 
 # --------------------------------------------------------------------------- #
@@ -278,6 +284,11 @@ class WriterOutput(BaseModel):
     status: Status
     written_content: WrittenContent
     generated_files: list[GeneratedFile] = Field(default_factory=list)
+
+
+class ReviewMarkdown(BaseModel):
+    """文献综述正文专用小 schema：仅输出 Markdown 综述文本。"""
+    markdown: str
 
 
 # --------------------------------------------------------------------------- #
