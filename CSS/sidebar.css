@@ -1,0 +1,449 @@
+/**
+ * sidebar.css — 侧边栏导航
+ * 侧边栏容器（毛玻璃）、Logo、折叠切换、导航项、Tooltip、
+ * 底部用户信息、深色切换按钮、收藏角标，以及主内容区偏移。
+ */
+
+/* =================================================================
+ * 五、侧边栏系统
+ * ================================================================= */
+
+/* ---------- 侧边栏容器（毛玻璃效果） ---------- */
+
+/* 使用 backdrop-filter 实现 macOS/iOS 风格的毛玻璃半透明背景 */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+
+  width: var(--sidebar-w);
+  height: 100vh;
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border-right: 1px solid #E5E7EB;
+
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 侧边栏折叠态 */
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed);
+}
+
+/* ---------- Logo 区域 ---------- */
+
+/* Logo 容器 */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+
+  padding: 14px 16px;
+  gap: 10px;
+  height: 56px;
+  flex-shrink: 0;
+
+  border-bottom: 1px solid #F3F4F6;
+}
+
+/* Logo 图标（单色蓝实心块，去渐变） */
+.sidebar-logo-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: var(--brand-blue);
+  border-radius: var(--radius-sm);
+  color: white;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* Logo 文字（纯黑，去渐变裁剪） */
+.sidebar-logo-text {
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 1;
+  color: var(--text-dark);
+
+  transition: opacity 0.2s;
+}
+
+/* 折叠态隐藏 Logo 文字 */
+.sidebar.collapsed .sidebar-logo-text {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+/* 折叠态隐藏全部 Logo */
+.sidebar.collapsed .sidebar-logo {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ---------- 折叠切换按钮 ---------- */
+
+/* 按钮位于侧边栏右上角，浅灰底单色箭头 */
+.sidebar-toggle {
+  position: absolute;
+  right: 8px;
+  top: 18px;
+  z-index: 10;
+
+  width: 28px;
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #F3F4F6;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-mid);
+  cursor: pointer;
+
+  transition: all 0.24s ease;
+}
+
+.sidebar-toggle:hover {
+  background: #E5E7EB;
+  color: var(--text-dark);
+}
+
+/* 折叠态按钮旋转 180 度 */
+.sidebar.collapsed .sidebar-toggle {
+  transform: rotate(180deg);
+}
+
+/* ---------- 导航区域 ---------- */
+
+/* 导航外层容器 */
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+
+  padding: 12px 0;
+}
+
+/* 导航分组标签 */
+.sidebar-group-label {
+  padding: 16px 20px 8px;
+
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+/* 折叠态隐藏分组标签 */
+.sidebar.collapsed .sidebar-group-label {
+  display: none;
+}
+
+/* 导航项 */
+.nav-item {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  padding: 9px 16px;
+  margin: 2px 12px;
+  gap: 12px;
+
+  border-radius: 4px;
+  border-left: 3px solid transparent;
+  color: var(--text-mid);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+/* 导航项悬停：极淡灰底，不变色 */
+.nav-item:hover {
+  background: #F8FAFC;
+  color: var(--text-mid);
+}
+
+/* 导航项激活态：左侧蓝色短竖线 + 文字/图标变蓝，背景透明 */
+.nav-item.active {
+  background: transparent;
+  color: var(--brand-blue);
+  border-left-color: var(--brand-blue);
+  font-weight: 550;
+  transition: border-left-color 0.3s ease, color 0.3s ease;
+}
+
+.nav-item.active:hover {
+  background: transparent;
+}
+
+/* 导航图标：线性 SVG，默认灰，active 蓝色 */
+.nav-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-mid);
+}
+
+.nav-item.active .nav-icon {
+  color: var(--brand-blue);
+}
+
+.nav-item:hover .nav-icon {
+  color: var(--text-mid);
+}
+
+.nav-item.active:hover .nav-icon {
+  color: var(--brand-blue);
+}
+
+/* 导航文字 */
+.nav-label {
+  font-size: 13.5px;
+  font-weight: 450;
+  line-height: 1.4;
+}
+
+.nav-item.active .nav-label {
+  font-weight: 550;
+}
+
+/* 折叠态导航项：居中显示 */
+.sidebar.collapsed .nav-item {
+  padding: 9px 0;
+  justify-content: center;
+  margin: 2px 6px;
+  border-left-color: transparent;
+}
+
+.sidebar.collapsed .nav-label {
+  display: none;
+}
+
+/* ---------- 折叠态 Tooltip（基于 data-tooltip 属性生成） ---------- */
+
+/* 伪元素 ::after 生成 tooltip 文本气泡 */
+.sidebar.collapsed .nav-item[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  z-index: 9999;
+
+  transform: translateY(-50%);
+
+  padding: 6px 14px;
+
+  background: #1F2937;
+  border-radius: 6px;
+  color: white;
+  font-size: 12px;
+  font-family: var(--font-cn);
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+
+  box-shadow: var(--shadow-lg);
+}
+
+/* 伪元素 ::before 生成 tooltip 三角箭头 */
+.sidebar.collapsed .nav-item[data-tooltip]:hover::before {
+  content: '';
+
+  position: absolute;
+  left: calc(100% + 4px);
+  top: 50%;
+  z-index: 9999;
+
+  transform: translateY(-50%);
+
+  border: 7px solid transparent;
+  border-right-color: #1F2937;
+  pointer-events: none;
+}
+
+/* ---------- 侧边栏底部（设置区域 + 用户信息） ---------- */
+
+/* 底部区域 */
+.sidebar-bottom {
+  flex-shrink: 0;
+
+  padding: 12px 16px 14px;
+
+  border-top: 1px solid #F3F4F6;
+}
+
+.sidebar.collapsed .sidebar-bottom {
+  padding: 12px 8px;
+}
+
+/* 底部"设置"分组标签 */
+.sidebar-bottom .sidebar-group-label {
+  padding: 4px 8px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* 用户信息卡片 */
+.user-profile {
+  display: flex;
+  align-items: center;
+
+  padding: 6px 8px;
+  gap: 10px;
+
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.user-profile:hover {
+  background: #F3F4F6;
+}
+
+/* 用户头像：浅灰底 + 深灰首字母，去渐变 */
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #F1F5F9;
+  border-radius: 50%;
+  color: var(--text-dark);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 用户信息区域 */
+.user-info {
+  white-space: nowrap;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.user-title {
+  font-size: 11px;
+  color: var(--text-light);
+}
+
+.sidebar.collapsed .user-info {
+  display: none;
+}
+
+/* 深色模式切换按钮：置于"设置"分组下的菜单项 */
+.dark-toggle {
+  display: flex;
+  align-items: center;
+
+  padding: 9px 12px;
+  margin: 2px 0 6px;
+  gap: 12px;
+
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+
+  font-size: 13.5px;
+  font-family: var(--font-cn);
+  color: var(--text-mid);
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.dark-toggle:hover {
+  background: #F7F8FA;
+}
+
+.dark-toggle-icon {
+  font-size: 18px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-mid);
+}
+
+.sidebar.collapsed .dark-toggle {
+  justify-content: center;
+  padding: 9px 0;
+  margin: 2px 0 6px;
+}
+
+.sidebar.collapsed .dark-toggle .dark-toggle-label {
+  display: none;
+}
+
+/* 收藏计数角标：品牌蓝，去红色 */
+.fav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: auto;
+
+  background: var(--brand-blue);
+  border-radius: var(--radius-full);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+/* =================================================================
+ * 六、主内容区布局
+ * ================================================================= */
+
+/* 主内容包裹层：偏移侧边栏宽度 */
+.main-wrap {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+
+  transition: margin-left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 侧边栏折叠时主内容区同步收缩 */
+.sidebar.collapsed + .main-wrap,
+.sidebar.collapsed ~ .main-wrap {
+  margin-left: var(--sidebar-collapsed);
+}

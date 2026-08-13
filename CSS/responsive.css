@@ -1,0 +1,367 @@
+/**
+ * responsive.css — 响应式媒体查询
+ * 断点：1200px / 900px / 768px / 600px / 480px
+ * 自上而下排列：大屏优先，逐步适配小屏
+ */
+
+/* =================================================================
+ * 1200px：桌面中等屏（侧边栏收缩 + 两列卡片）
+ * ================================================================= */
+
+@media (max-width: 1200px) {
+  .paper-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sidebar {
+    width: var(--sidebar-collapsed);
+  }
+
+  .sidebar .sidebar-logo-text,
+  .sidebar .nav-label,
+  .sidebar .sidebar-group-label,
+  .sidebar .user-info {
+    display: none;
+  }
+
+  .sidebar .nav-item {
+    padding: 10px 0;
+    justify-content: center;
+    margin: 2px 6px;
+  }
+
+  .sidebar .sidebar-bottom {
+    padding: 12px 8px;
+  }
+
+  .main-wrap {
+    margin-left: var(--sidebar-collapsed);
+  }
+}
+
+/* =================================================================
+ * 900px：平板适配
+ * ================================================================= */
+
+@media (max-width: 900px) {
+  /* 取消 2/3 宽度约束，恢复全宽布局 */
+  .page-content {
+    max-width: none;
+    margin: 0;
+    padding: 16px;
+  }
+
+  .paper-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .journal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sub-layout {
+    flex-direction: column;
+  }
+
+  .sub-right {
+    width: 100%;
+  }
+
+  .ai-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .ai-left,
+  .ai-right {
+    width: 100%;
+  }
+
+  .lib-layout {
+    flex-direction: column;
+  }
+
+  .lib-left {
+    width: 100%;
+  }
+
+  .main-wrap {
+    margin-left: var(--sidebar-collapsed);
+  }
+
+  .reading-body {
+    flex-direction: column;
+  }
+
+  .reading-pdf {
+    flex: none;
+    height: 50vh;
+  }
+
+  .reading-ai {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #E5E7EB;
+    height: 40vh;
+  }
+
+  /* 投稿分析 V2：上下堆叠，高度自适应 */
+  .sub-layout-new {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sub-right-new {
+    width: 100%;
+    height: 50vh;
+    border-top: 1px solid #E5E7EB;
+  }
+
+  .sub-left-new {
+    padding: 16px;
+    overflow-y: visible;
+  }
+
+  .journal-grid-new {
+    grid-template-columns: 1fr;
+  }
+
+  /* AI V2：上下堆叠，高度自适应 */
+  .ai-layout-new {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .ai-editor-new {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #E5E7EB;
+    height: 40vh;
+  }
+
+  #page-ai {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  #page-submit {
+    height: auto;
+    overflow: visible;
+  }
+
+  .daily-rec-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =================================================================
+ * 768px：手机大屏
+ * ================================================================= */
+
+@media (max-width: 768px) {
+  .paper-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .hero-body {
+    flex-direction: column;
+    gap: 0;
+    padding: 0 16px;
+  }
+  .hero-visual { display: none; }
+  .hero-title { font-size: 24px; }
+  .hero-section { padding: 20px 0 16px; }
+
+  .search-box-wrap {
+    max-width: 100%;
+  }
+
+  .search-box {
+    padding: 6px 6px 6px 14px;
+    height: 44px;
+  }
+
+  .search-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .search-shortcut { display: none; }
+
+  .page-content {
+    padding: 8px;
+  }
+
+  .paper-card {
+    padding: 14px;
+  }
+
+  .stat-card {
+    padding: 14px;
+  }
+
+  .stat-number {
+    font-size: 22px;
+  }
+
+  /* 阅读面板上下堆叠 */
+  .reading-body {
+    flex-direction: column;
+    max-height: calc(100vh - 120px);
+  }
+
+  .reading-pdf {
+    flex: none;
+    height: 50vh;
+  }
+
+  .reading-ai {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #E5E7EB;
+    height: 40vh;
+  }
+
+  /* AI 助手上下堆叠 */
+  .ai-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .ai-left,
+  .ai-right {
+    width: 100%;
+  }
+
+  .ai-left {
+    border-right: none;
+    border-bottom: 1px solid #E5E7EB;
+  }
+
+  /* 投稿分析单列 */
+  .journal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sub-layout {
+    flex-direction: column;
+  }
+
+  .sub-right {
+    width: 100%;
+  }
+
+  /* 侧边栏收缩 */
+  .main-wrap {
+    margin-left: var(--sidebar-collapsed);
+  }
+
+  .lib-layout {
+    flex-direction: column;
+  }
+
+  .lib-left {
+    width: 100%;
+  }
+
+  /* 公式弹窗 */
+  .formula-modal {
+    width: 92vw;
+    padding: 20px;
+  }
+
+  .formula-modal .formula-display {
+    font-size: 15px;
+    padding: 14px;
+    overflow-x: auto;
+  }
+
+  /* 版本面板 */
+  .version-panel {
+    padding: 20px;
+  }
+
+  .trans-mockup {
+    grid-template-columns: 1fr;
+  }
+
+  /* 收藏页 */
+  .fav-page-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notif-page-item {
+    padding: 14px 16px;
+  }
+
+  .notif-page-time {
+    display: none;
+  }
+
+  /* AI V2 */
+  .ai-topic-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-welcome-title {
+    font-size: 20px;
+  }
+
+  .ai-welcome-area {
+    padding: 30px 16px 20px;
+  }
+
+  .ai-msg-bubble-new {
+    padding: 14px 16px;
+    font-size: 13px;
+  }
+
+  .ai-input-area-new {
+    padding: 10px 12px;
+  }
+
+  .ai-sidebar-new.open {
+    width: 220px;
+  }
+
+  .daily-rec-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =================================================================
+ * 600px：小屏手机
+ * ================================================================= */
+
+@media (max-width: 600px) {
+  .daily-rec-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+}
+
+/* =================================================================
+ * 480px：极小屏
+ * ================================================================= */
+
+@media (max-width: 480px) {
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

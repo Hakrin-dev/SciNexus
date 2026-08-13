@@ -1,0 +1,383 @@
+/**
+ * library.css — 文献库样式
+ * 主从布局、分区、文件夹项、标签云、统计、工具栏、
+ * 文献列表项、阅读状态、进度、批量操作栏。
+ */
+
+
+/* =================================================================
+ * 十二、文献库
+ * ================================================================= */
+
+/* 文献库主从布局 */
+.lib-layout {
+  display: flex;
+  gap: 24px;
+}
+
+.lib-left {
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.lib-right {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 左侧分区 */
+.lib-section {
+  padding: 16px;
+  margin-bottom: 12px;
+
+  background: var(--card-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.lib-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-mid);
+  margin-bottom: 8px;
+
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* 文件夹项 */
+.folder-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 8px 10px;
+
+  border-radius: var(--radius-sm);
+
+  font-size: 13px;
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.folder-item:hover {
+  background: var(--bg-light);
+}
+
+.folder-item.active {
+  background: #EEF2FF;
+  color: var(--brand-blue);
+  font-weight: 500;
+}
+
+.folder-count {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+/* 标签云 */
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-item {
+  padding: 4px 12px;
+
+  background: var(--bg-light);
+  border-radius: var(--radius-full);
+
+  font-size: 12px;
+  color: var(--text-mid);
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.tag-item:hover {
+  background: #EEF2FF;
+  color: var(--brand-blue);
+}
+
+.tag-item.active {
+  background: var(--brand-blue);
+  color: white;
+}
+
+/* 文献库统计 */
+.lib-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.lib-stat-row {
+  display: flex;
+  justify-content: space-between;
+
+  font-size: 13px;
+  color: var(--text-mid);
+}
+
+.lib-stat-bar {
+  height: 6px;
+  margin-top: 2px;
+
+  background: #F3F4F6;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.lib-stat-fill {
+  height: 100%;
+
+  background: var(--brand-blue);
+  border-radius: 3px;
+}
+
+/* 文献库工具栏 */
+.lib-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.lib-search-input {
+  flex: 1;
+  min-width: 180px;
+
+  padding: 8px 14px;
+
+  border: 1px solid #E5E7EB;
+  border-radius: var(--radius-sm);
+  outline: none;
+
+  font-size: 13px;
+  font-family: var(--font-cn);
+
+  transition: var(--transition);
+}
+
+.lib-search-input:focus {
+  border-color: var(--brand-blue);
+}
+
+.lib-select {
+  padding: 8px 14px;
+
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: var(--radius-sm);
+  outline: none;
+
+  font-size: 13px;
+  font-family: var(--font-cn);
+  cursor: pointer;
+}
+
+/* 文献列表 */
+.lib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 文献列表项 */
+.lib-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 12px 16px;
+
+  background: var(--card-white);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.lib-item:hover {
+  border-color: #E5E7EB;
+  box-shadow: var(--shadow-sm);
+}
+
+.lib-item:active {
+  transform: scale(0.995);
+  background: #F3F4F6;
+}
+
+.lib-item.selected {
+  background: #EEF2FF;
+  border-color: var(--brand-blue);
+}
+
+.lib-item-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-blue);
+  cursor: pointer;
+}
+
+.lib-item .ccf-badge {
+  flex-shrink: 0;
+}
+
+/* 阅读状态指示点 */
+.read-status {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  flex-shrink: 0;
+
+  border-radius: 50%;
+}
+
+.read-status.read {
+  background: #059669;
+}
+
+.read-status.reading {
+  background: #F59E0B;
+}
+
+.read-status.unread {
+  background: #D1D5DB;
+}
+
+/* 文献信息 */
+.lib-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.lib-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lib-item-title:hover {
+  color: var(--brand-blue);
+}
+
+.lib-item-authors {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+
+.lib-item-venue {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+.lib-item-tags {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.lib-item-tags .tag-item {
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.lib-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.lib-item-actions .btn-action {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+/* 文献阅读进度 */
+.lib-item-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+.lib-item-progress .progress-bar {
+  width: 60px;
+  height: 4px;
+
+  background: #F3F4F6;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.lib-item-progress .progress-fill {
+  height: 100%;
+
+  background: var(--brand-orange);
+  border-radius: 2px;
+}
+
+.lib-item-progress .progress-text {
+  font-size: 11px;
+  color: var(--text-light);
+}
+
+/* 批量操作栏 */
+.batch-bar {
+  display: none;
+
+  align-items: center;
+  gap: 12px;
+
+  padding: 10px 16px;
+  margin-top: 8px;
+
+  background: var(--brand-blue);
+  border-radius: var(--radius-sm);
+
+  font-size: 13px;
+  color: white;
+}
+
+.batch-bar.active {
+  display: flex;
+}
+
+.batch-bar .btn {
+  padding: 4px 12px;
+
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-sm);
+
+  font-size: 12px;
+  font-family: var(--font-cn);
+  color: white;
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.batch-bar .btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.batch-bar .btn.danger {
+  border-color: var(--brand-red);
+}
+
+.batch-bar .btn.danger:hover {
+  background: rgba(220, 38, 38, 0.3);
+}
+
+.batch-count {
+  font-weight: 600;
+}

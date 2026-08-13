@@ -1,0 +1,31 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "script"
+  },
+  "rules": {
+    "no-var": "warn",
+    "prefer-const": "warn",
+    "no-unused-vars": "warn",
+    "no-undef": "off",
+    "semi": ["error", "always"],
+    "quotes": ["warn", "single"],
+    "indent": ["warn", 2],
+    "no-console": "off"
+  },
+  "globals": {
+    "papers": "writable",
+    "libraryPapers": "writable",
+    "paperCount": "writable",
+    "conversations": "writable",
+    "subChatHistory": "writable",
+    "libSelectedFolder": "writable",
+    "libSelectedTags": "writable"
+  }
+}

@@ -1,0 +1,83 @@
+/**
+ * animations.css — 动画定义
+ * 所有 @keyframes 关键帧定义，以及按钮按下缩放等交互动画反馈。
+ */
+
+/* 骨架屏脉冲动画 */
+@keyframes skeletonPulse {
+  0%   { opacity: 0.5; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+/* 三点脉冲动画 */
+@keyframes dotPulse {
+  0%, 20% { opacity: 0; }
+  50%     { opacity: 1; }
+  100%    { opacity: 0; }
+}
+/* =================================================================
+ * 十八、动画系统
+ * ================================================================= */
+
+/* 页面淡入上移 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 弹窗下落 */
+@keyframes dropIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 卡片上滑入场 */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 消息入场 */
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 页面切换 */
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 波纹扩散 */
+@keyframes rippleAnim {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* 旋转加载（无限） */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Toast 弹出 */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ---------- 交互反馈 ---------- */
+
+/* 按钮按下缩放反馈 */
+.btn-action:active,
+.btn-load-more:active,
+.search-btn:active,
+.btn-tool:active,
+.reading-tab:active,
+.ai-send-btn:active,
+.sub-chat-input button:active,
+.mode-btn:active,
+.reading-ai-input button:active,
+.btn:active {
+  transform: scale(0.97) !important;
+}

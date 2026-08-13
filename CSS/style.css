@@ -1,0 +1,33 @@
+/**
+ * 研枢 YanShu — 全局样式表（入口文件）
+ *
+ * 原始单文件已按功能拆分为 12 个模块，本文件仅负责按正确顺序
+ * 通过 @import 引入所有模块，保持与原始样式一致的层叠顺序。
+ *
+ * 模块说明：
+ *   1. variables   — CSS 自定义属性（设计令牌），必须最先加载
+ *   2. base        — 全局重置、排版、滚动条、页面切换系统
+ *   3. animations  — @keyframes 关键帧与交互反馈动画
+ *   4. sidebar     — 侧边栏导航与主内容区布局
+ *   5. search      — 搜索页 Hero、搜索框、论文卡片
+ *   6. ai-chat     — AI 助手对话页
+ *   7. submission  — 投稿分析页
+ *   8. library     — 文献库
+ *   9. reading     — 阅读浮层
+ *  10. components  — 通用组件（骨架屏、徽章、弹窗、面板等）
+ *  11. dark-mode   — 深色模式覆盖样式
+ *  12. responsive  — 响应式媒体查询，必须最后加载
+ */
+
+@import url("variables.css");
+@import url("base.css");
+@import url("animations.css");
+@import url("sidebar.css");
+@import url("search.css");
+@import url("ai-chat.css");
+@import url("submission.css");
+@import url("library.css");
+@import url("reading.css");
+@import url("components.css");
+@import url("dark-mode.css");
+@import url("responsive.css");

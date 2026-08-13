@@ -1,0 +1,62 @@
+/**
+ * variables.css — CSS 自定义属性（设计令牌）
+ * 研枢全局设计令牌：品牌色、背景、文字色、阴影、圆角、尺寸、字体栈、过渡。
+ * 该文件必须在所有其他样式之前加载。
+ *
+ * 设计规范：专业稳重学术风（对标 Semantic Scholar / 智谱学术）
+ * 页面背景 #F7F8FA · 卡片 #FFFFFF · 主品牌蓝 #165DFF
+ * 文字三级：#1D2129（标题）/ #4E5969（正文）/ #86909C（辅助）
+ * 卡片圆角统一 8px · 默认阴影 0 1px 3px rgba(0,0,0,0.06)
+ */
+
+/* =================================================================
+ * 一、CSS 自定义属性（设计令牌）
+ * ================================================================= */
+
+:root {
+  /* 品牌色（仅保留主品牌蓝与语义色） */
+  --brand-blue: #165DFF;
+  --brand-red: #F53F3F;
+
+  /* 背景与卡片 */
+  --bg-light: #F7F8FA;
+  --card-white: #FFFFFF;
+
+  /* 文字层级：标题 / 正文摘要 / 辅助次要 */
+  --text-dark: #1D2129;
+  --text-mid: #4E5969;
+  --text-light: #86909C;
+
+  /* 阴影层级：默认轻阴影，hover 轻微加深 */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
+
+  /* 圆角：卡片统一 8px，禁止更大圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  /* CCF 会议等级徽章配色 */
+  --ccf-a: #00B42A;
+  --ccf-b: #FF7D00;
+  --ccf-c: #86909C;
+
+  /* Hot 热度标识色 */
+  --hot-red: #F53F3F;
+
+  /* 侧边栏尺寸 */
+  --sidebar-w: 256px;
+  --sidebar-collapsed: 72px;
+
+  /* 内容区宽度：视框五分之四 */
+  --content-max-w: 80vw;
+
+  /* 字体栈：Inter / 思源黑体 / system-ui */
+  --font-cn: 'Inter', 'Noto Sans SC', 'Source Han Sans SC', '思源黑体', -apple-system, 'PingFang SC', system-ui, sans-serif;
+  --font-en: 'Inter', -apple-system, system-ui, sans-serif;
+
+  /* 全局过渡 */
+  --transition: all 0.2s ease;
+}

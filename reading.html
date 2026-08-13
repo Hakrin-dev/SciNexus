@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<!--
+  研枢 YanShu — 论文阅读全屏独立页面（v3.0 三栏增强版）
+  布局：左目录工具栏 + 中PDF阅读区 + 右AI助手面板
+  路由进入：reading.html?id=论文ID
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>论文阅读 — 研枢 YanShu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="CSS/variables.css">
+  <link rel="stylesheet" href="CSS/base.css">
+  <link rel="stylesheet" href="CSS/reading-page.css">
+  <link rel="stylesheet" href="CSS/dark-mode.css">
+</head>
+<body>
+
+  <div class="reading-page" id="readingPage">
+
+    <!-- ========== 顶部导航栏 ========== -->
+    <nav class="reading-navbar">
+      <button class="reading-nav-back" onclick="goBackToHome()" title="返回首页">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="reading-nav-title" id="readingTitle">论文阅读</span>
+      <div class="reading-nav-actions">
+        <button class="reading-nav-icon-btn" onclick="toggleLeftSidebar()" title="目录 (Ctrl+B)" id="toggleLeftBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+        </button>
+        <button class="reading-nav-icon-btn" onclick="toggleRightSidebar()" title="AI助手 (Ctrl+/)" id="toggleRightBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg>
+        </button>
+        <button class="reading-nav-icon-btn" onclick="showShortcutHelp()" title="快捷键 (?)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+        </button>
+        <div class="reading-nav-divider"></div>
+        <button class="reading-nav-icon-btn" onclick="toggleReadingFav()" title="收藏" id="readingFavBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>
+        </button>
+        <button class="reading-nav-icon-btn" onclick="downloadPdf()" title="下载PDF">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <button class="reading-nav-icon-btn" onclick="exportReadingCitation()" title="导出引用">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </button>
+        <button class="reading-nav-icon-btn" onclick="shareReadingPaper()" title="分享">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ========== 主体：三栏布局 ========== -->
+    <div class="reading-main">
+
+      <!-- ========== 左栏：目录与工具 ========== -->
+      <aside class="reading-sidebar-left" id="readingSidebarLeft">
+        <div class="sidebar-left-tabs">
+          <button class="sidebar-left-tab active" onclick="switchLeftPanel('outline')" title="目录大纲">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+          <button class="sidebar-left-tab" onclick="switchLeftPanel('search')" title="全文搜索">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+          <button class="sidebar-left-tab" onclick="switchLeftPanel('highlights')" title="高亮与笔记">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="sidebar-left-tab" onclick="switchLeftPanel('bookmarks')" title="书签">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        </div>
+
+        <!-- 面板：目录大纲 -->
+        <div class="sidebar-left-panel active" id="panelOutline">
+          <div class="sidebar-panel-header">
+            <span>论文大纲</span>
+            <button class="sidebar-panel-action" onclick="generateOutline()" title="AI生成大纲">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg>
+            </button>
+          </div>
+          <div class="sidebar-panel-body" id="outlineList">
+            <!-- 大纲由JS动态生成 -->
+          </div>
+        </div>
+
+        <!-- 面板：全文搜索 -->
+        <div class="sidebar-left-panel" id="panelSearch">
+          <div class="sidebar-panel-header">
+            <span>全文搜索</span>
+          </div>
+          <div class="sidebar-search-box">
+            <input type="text" id="pdfSearchInput" placeholder="搜索论文内容..." oninput="searchInPdf(this.value)">
+          </div>
+          <div class="sidebar-panel-body" id="searchResults">
+            <p class="sidebar-empty-hint">输入关键词搜索论文内容</p>
+          </div>
+        </div>
+
+        <!-- 面板：高亮与笔记 -->
+        <div class="sidebar-left-panel" id="panelHighlights">
+          <div class="sidebar-panel-header">
+            <span>高亮与笔记</span>
+            <span class="sidebar-panel-count" id="highlightCount">0</span>
+          </div>
+          <div class="highlight-color-picker" id="highlightColorPicker">
+            <button class="hl-color-btn active" data-color="#FFF3B0" style="background:#FFF3B0;" title="黄色高亮"></button>
+            <button class="hl-color-btn" data-color="#C6F6D5" style="background:#C6F6D5;" title="绿色高亮"></button>
+            <button class="hl-color-btn" data-color="#BFDBFE" style="background:#BFDBFE;" title="蓝色高亮"></button>
+            <button class="hl-color-btn" data-color="#FBCFE8" style="background:#FBCFE8;" title="粉色高亮"></button>
+          </div>
+          <div class="sidebar-panel-body" id="highlightsList">
+            <p class="sidebar-empty-hint">选中正文文字后点击高亮颜色即可标注</p>
+          </div>
+        </div>
+
+        <!-- 面板：书签 -->
+        <div class="sidebar-left-panel" id="panelBookmarks">
+          <div class="sidebar-panel-header">
+            <span>书签</span>
+            <button class="sidebar-panel-action" onclick="addBookmark()" title="添加书签">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+          <div class="sidebar-panel-body" id="bookmarksList">
+            <p class="sidebar-empty-hint">点击 + 添加书签标记当前位置</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ========== 中栏：PDF阅读区 ========== -->
+      <main class="reading-center" id="readingPdf">
+        <!-- 阅读进度条 -->
+        <div class="rpage-progress-wrap"><div class="rpage-progress-fill" id="readingProgressFill"></div></div>
+
+        <!-- PDF阅读工具栏 -->
+        <div class="pdf-toolbar">
+          <div class="pdf-toolbar-group">
+            <button class="pdf-tool-btn" onclick="zoomPdf(-0.1)" title="缩小">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <span class="pdf-zoom-label" id="pdfZoomLabel">100%</span>
+            <button class="pdf-tool-btn" onclick="zoomPdf(0.1)" title="放大">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg>
+            </button>
+          </div>
+          <div class="pdf-toolbar-group">
+            <button class="pdf-tool-btn" onclick="setReadMode('light')" title="亮色模式">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+            </button>
+            <button class="pdf-tool-btn" onclick="setReadMode('sepia')" title="护眼模式">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.7 0 3-1.3 3-3 0-.8-.3-1.5-.8-2-.5-.5-.7-1.2-.7-2 0-1.7 1.3-3 3-3h1c2.2 0 4-1.8 4-4 0-3.9-4.5-7-9.5-7z"/></svg>
+            </button>
+            <button class="pdf-tool-btn" onclick="setReadMode('dark')" title="深色模式">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+          </div>
+          <div class="pdf-toolbar-group">
+            <span class="pdf-stats" id="pdfStats">阅读 0 分钟 · 0 字</span>
+          </div>
+        </div>
+
+        <!-- PDF正文内容 -->
+        <div class="reading-pdf-wrap" id="readingPdfInner">
+          <div class="rpage-pdf-title" id="pdfDetailTitle">Attention Is All You Need</div>
+          <div class="rpage-pdf-meta" id="pdfDetailMeta">Vaswani et al. | NeurIPS 2017 | 引用数: 98,700+</div>
+          <div class="rpage-pdf-section" data-section="abstract">
+            <h3>Abstract</h3>
+            <p>The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.</p>
+          </div>
+          <div class="rpage-pdf-section" data-section="intro">
+            <h3>1. Introduction</h3>
+            <p>Recurrent neural networks, long short-term memory and gated recurrent neural networks in particular, have been firmly established as state of the art approaches in sequence modeling and transduction problems such as language modeling and machine translation.</p>
+            <p>The Transformer, proposed in this work, eschews recurrence and instead relies entirely on an attention mechanism to draw global dependencies between input and output. The Transformer allows for significantly more parallelization and can reach a new state of the art in translation quality after being trained for as little as twelve hours on eight GPU.</p>
+          </div>
+          <div class="rpage-pdf-section" data-section="model">
+            <h3>3. Model Architecture</h3>
+            <p>Most competitive neural sequence transduction models have an encoder-decoder structure. The encoder maps an input sequence of symbol representations to a sequence of continuous representations. The decoder then generates an output sequence of symbols one element at a time.</p>
+            <div class="formula" onclick="openFormulaInterpretation('attention')">Attention(Q,K,V) = softmax(QK<sup>T</sup>&frasl;&radic;d<sub>k</sub>)V</div>
+            <p>The Transformer uses multi-head attention, where the attention function is computed in parallel over h heads:</p>
+            <div class="formula" onclick="openFormulaInterpretation('multihead')">MultiHead(Q,K,V) = Concat(head<sub>1</sub>,...,head<sub>h</sub>)W<sup>O</sup></div>
+            <div class="formula" onclick="openFormulaInterpretation('head')">head<sub>i</sub> = Attention(QW<sub>i</sub><sup>Q</sup>, KW<sub>i</sub><sup>K</sup>, VW<sub>i</sub><sup>V</sup>)</div>
+          </div>
+        </div>
+
+        <!-- 文本选中浮动菜单 -->
+        <div class="pdf-float-menu enhanced" id="pdfFloatMenu" style="display:none;">
+          <button onclick="onPdfFloatAction('translate')" title="翻译选中文字">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
+            <span>翻译</span>
+          </button>
+          <button onclick="onPdfFloatAction('explain')" title="解释概念">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>解释</span>
+          </button>
+          <button onclick="onPdfFloatAction('summarize')" title="总结段落">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span>总结</span>
+          </button>
+          <button onclick="onPdfFloatAction('highlight')" title="高亮标注">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+            <span>高亮</span>
+          </button>
+          <button onclick="onPdfFloatAction('question')" title="提问">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>提问</span>
+          </button>
+        </div>
+      </main>
+
+      <!-- ========== 右栏：AI助手面板 ========== -->
+      <aside class="reading-sidebar-right" id="readingAi">
+        <div class="rpage-ai-tabs">
+          <button class="rpage-ai-tab active" onclick="rpageSwitchAiTab(this,'summary')">摘要</button>
+          <button class="rpage-ai-tab" onclick="rpageSwitchAiTab(this,'novelty')">创新</button>
+          <button class="rpage-ai-tab" onclick="rpageSwitchAiTab(this,'experiment')">实验</button>
+          <button class="rpage-ai-tab" onclick="rpageSwitchAiTab(this,'qa')">问答</button>
+          <button class="rpage-ai-tab" onclick="rpageSwitchAiTab(this,'translate')">翻译</button>
+        </div>
+        <div class="rpage-ai-content" id="readingAiContent">
+          <!-- 由JS动态填充 -->
+        </div>
+        <div class="rpage-ai-input">
+          <input placeholder="对论文提出你的问题..." id="readingAiInput" onkeydown="if(event.key==='Enter'){askReadingQuestion()}">
+          <button onclick="askReadingQuestion()" title="发送">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ========== 底部状态栏 ========== -->
+    <div class="rpage-bottombar">
+      <div class="rpage-bottom-left">
+        <span class="rpage-page-info" id="pageInfo">第 1 页 / 共 1 页</span>
+        <span class="rpage-progress-text" id="progressText">0%</span>
+      </div>
+      <div class="rpage-bottom-right">
+        <button class="rpage-btn" onclick="openGraphFromReading()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="6" y1="9" x2="12" y2="15"/><line x1="18" y1="9" x2="12" y2="15"/></svg>
+          引用图谱
+        </button>
+        <button class="rpage-btn" onclick="showSimilarPapers()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          相似论文
+        </button>
+        <button class="rpage-btn" onclick="exportReadingNotes()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          导出笔记
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 公式解读弹窗（增强版） ========== -->
+  <div class="formula-overlay" id="formulaOverlay" onclick="if(event.target===this)closeFormulaModal()">
+    <div class="formula-modal">
+      <div class="formula-modal-header">
+        <h3 id="formulaTitle">公式解读</h3>
+        <button class="formula-latex-btn" onclick="copyFormulaLatex()" title="复制LaTeX">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          LaTeX
+        </button>
+      </div>
+      <div class="formula-display" id="formulaDisplay"></div>
+      <div class="formula-section">
+        <h4>逐步解读</h4>
+        <div id="formulaStepByStep"></div>
+      </div>
+      <div class="formula-section">
+        <h4>变量含义</h4>
+        <div id="formulaVariables"></div>
+      </div>
+      <div class="formula-section">
+        <h4>物理意义</h4>
+        <p id="formulaMeaning"></p>
+      </div>
+      <div class="formula-section" id="formulaRelatedSection" style="display:none;">
+        <h4>相关公式</h4>
+        <div id="formulaRelated"></div>
+      </div>
+      <button class="formula-close" onclick="closeFormulaModal()">关闭</button>
+    </div>
+  </div>
+
+  <!-- ========== 相似论文面板（全屏弹层） ========== -->
+  <div class="similar-overlay" id="similarOverlay" onclick="if(event.target===this)closeSimilarPapers()">
+    <div class="similar-modal">
+      <div class="similar-modal-header">
+        <h3>相似论文与引用关系</h3>
+        <div class="similar-view-tabs">
+          <button class="similar-view-tab active" onclick="switchSimilarView('list')">列表视图</button>
+          <button class="similar-view-tab" onclick="switchSimilarView('graph')">图谱视图</button>
+        </div>
+        <button class="similar-close-btn" onclick="closeSimilarPapers()">&#10005;</button>
+      </div>
+      <div class="similar-modal-body">
+        <div class="similar-view-panel active" id="similarListView">
+          <div class="similar-list-toolbar">
+            <input class="similar-search-input" placeholder="搜索相似论文..." id="similarSearchInput" oninput="filterSimilarPapers(this.value)">
+            <select class="similar-sort-select" id="similarSortSelect" onchange="sortSimilarPapers()">
+              <option value="relevance">按相关度</option>
+              <option value="citations">按引用量</option>
+              <option value="year">按年份</option>
+            </select>
+          </div>
+          <div class="similar-list" id="similarList"></div>
+        </div>
+        <div class="similar-view-panel" id="similarGraphView">
+          <div class="similar-graph-wrap">
+            <svg id="citationGraph" width="100%" height="100%"></svg>
+          </div>
+          <div class="similar-graph-detail" id="similarGraphDetail">
+            <p class="sidebar-empty-hint">点击节点查看论文详情</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 笔记编辑弹窗 ========== -->
+  <div class="note-overlay" id="noteOverlay" onclick="if(event.target===this)closeNoteEditor()">
+    <div class="note-modal">
+      <div class="note-modal-header">
+        <h3 id="noteModalTitle">添加笔记</h3>
+        <button class="note-close-btn" onclick="closeNoteEditor()">&#10005;</button>
+      </div>
+      <div class="note-modal-body">
+        <div class="note-highlight-preview" id="noteHighlightPreview" style="display:none;">
+          <label>高亮文字</label>
+          <div class="note-highlight-text" id="noteHighlightText"></div>
+        </div>
+        <label>笔记内容</label>
+        <textarea id="noteContent" placeholder="在此输入你的笔记..." rows="6"></textarea>
+        <div class="note-modal-actions">
+          <button class="note-btn-save" onclick="saveNote()">保存笔记</button>
+          <button class="note-btn-delete" id="noteBtnDelete" style="display:none;" onclick="deleteNote()">删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 快捷键帮助弹窗 ========== -->
+  <div class="shortcut-overlay-enhanced" id="shortcutOverlayEnhanced" onclick="if(event.target===this)closeShortcutHelp()">
+    <div class="shortcut-modal-enhanced">
+      <h3>键盘快捷键</h3>
+      <div class="shortcut-list-enhanced">
+        <div class="shortcut-row-enhanced"><span>上一页 / 下一页</span><span class="shortcut-keys"><kbd>←</kbd> / <kbd>→</kbd></span></div>
+        <div class="shortcut-row-enhanced"><span>滚动</span><span class="shortcut-keys"><kbd>空格</kbd> / <kbd>Shift+空格</kbd></span></div>
+        <div class="shortcut-row-enhanced"><span>全文搜索</span><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>F</kbd></span></div>
+        <div class="shortcut-row-enhanced"><span>显示/隐藏目录</span><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>B</kbd></span></div>
+        <div class="shortcut-row-enhanced"><span>显示/隐藏AI面板</span><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>/</kbd></span></div>
+        <div class="shortcut-row-enhanced"><span>高亮选中文字</span><span class="shortcut-keys"><kbd>H</kbd></span></div>
+        <div class="shortcut-row-enhanced"><span>添加笔记</span><span class="shortcut-keys"><kbd>N</kbd></span></div>
+        <div class="shortcut-row-enhanced"><span>添加书签</span><span class="shortcut-keys"><kbd>M</kbd></span></div>
+        <div class="shortcut-row-enhanced"><span>翻译选中段落</span><span class="shortcut-keys"><kbd>T</kbd></span></div>
+        <div class="shortcut-row-enhanced"><span>关闭弹窗</span><span class="shortcut-keys"><kbd>Esc</kbd></span></div>
+        <div class="shortcut-row-enhanced"><span>查看快捷键</span><span class="shortcut-keys"><kbd>?</kbd></span></div>
+      </div>
+      <button class="shortcut-close-enhanced" onclick="closeShortcutHelp()">关闭</button>
+    </div>
+  </div>
+
+  <!-- ========== 图谱提示容器 ========== -->
+  <div id="graphTooltip" style="position:fixed;display:none;background:var(--card-white);border:1px solid #E5E8EF;border-radius:8px;padding:12px;box-shadow:var(--shadow-lg);font-size:12px;z-index:5000;pointer-events:none;"></div>
+
+  <!-- ========== 外部脚本 (按依赖顺序) ========== -->
+  <script src="js/utils.js?v=13"></script>
+  <script src="js/api.js?v=13"></script>
+  <script src="js/markdown.js?v=13"></script>
+  <script src="js/papers-data.js?v=1"></script>
+  <script src="js/library.js?v=13"></script>
+  <script src="js/search.js?v=13"></script>
+  <script src="js/reading.js?v=16"></script>
+  <script src="js/reading-enhanced.js?v=2"></script>
+
+  <!-- ========== 阅读页初始化 ========== -->
+  <script>
+    (function() {
+      // 降级论文数据
+      const fallbackPapers = [
+        { id:'p1',title:'Attention Is All You Need',authors:'Vaswani et al.',venue:'NeurIPS 2017',year:2017,ccf:'A',citations:'98,700+',heat:'Hot',keywords:['NLP','Transformer'],abstract:'提出了革命性的Transformer架构，完全基于自注意力机制替代传统的循环和卷积结构。核心创新包括缩放点积注意力、多头注意力机制和位置编码。在WMT 2014英德翻译任务上取得28.4 BLEU，训练时间大幅缩短。' },
+        { id:'p2',title:'BERT: Pre-training of Deep Bidirectional Transformers',authors:'Devlin et al.',venue:'NAACL 2019',year:2019,ccf:'A',citations:'65,200+',heat:'Hot',keywords:['NLP','预训练'],abstract:'提出BERT预训练模型，通过掩码语言模型（MLM）和下一句预测（NSP）实现深度双向表征学习。' },
+        { id:'p19',title:'Deep Residual Learning for Image Recognition',authors:'He et al.',venue:'CVPR 2016',year:2016,ccf:'A',citations:'178,000+',heat:'Hot',keywords:['ML','深度学习'],abstract:'提出残差学习框架（ResNet），通过跳连接解决了深层网络退化问题。152层ResNet在ImageNet上达到3.57% top-5错误率。' },
+        { id:'p31',title:'Generative Adversarial Nets',authors:'Goodfellow et al.',venue:'NeurIPS 2014',year:2014,ccf:'A',citations:'58,000+',heat:'Hot',keywords:['ML','生成模型','GAN'],abstract:'提出生成对抗网络（GAN）框架，通过生成器和判别器的博弈训练生成模型。' },
+        { id:'p32',title:'Adam: A Method for Stochastic Optimization',authors:'Kingma et al.',venue:'ICLR 2015',year:2015,ccf:'A',citations:'136,000+',heat:'Hot',keywords:['ML','优化器'],abstract:'提出Adam优化器，结合动量和自适应学习率，已成为深度学习最广泛使用的优化器之一。' }
+      ];
+      window.fallbackPapers = fallbackPapers;
+      if (typeof papers === 'undefined' || !papers || !papers.length) {
+        window.papers = fallbackPapers;
+      }
+      if (typeof libraryPapers === 'undefined' || !libraryPapers || !libraryPapers.length) {
+        window.libraryPapers = [];
+      }
+
+      // 深色模式初始化
+      (function initDarkMode() {
+        const saved = localStorage.getItem('deepknow_theme');
+        if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      })();
+
+      // 获取当前论文 ID
+      const urlParams = new URLSearchParams(window.location.search);
+      const paperId = urlParams.get('id');
+
+      window.goBackToHome = function() {
+        window.location.href = 'index.html';
+      };
+
+      // 初始渲染阅读页面
+      if (typeof initReadingPage === 'function') {
+        initReadingPage(paperId);
+      }
+
+      // 初始化增强功能
+      if (typeof initReadingEnhanced === 'function') {
+        initReadingEnhanced(paperId);
+      }
+
+      // 全局键盘快捷键
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          const fo = document.getElementById('formulaOverlay');
+          if (fo && fo.classList.contains('active')) closeFormulaModal();
+          const so = document.getElementById('similarOverlay');
+          if (so && so.classList.contains('active')) closeSimilarPapers();
+          const no = document.getElementById('noteOverlay');
+          if (no && no.classList.contains('active')) closeNoteEditor();
+          const sh = document.getElementById('shortcutOverlayEnhanced');
+          if (sh && sh.classList.contains('active')) closeShortcutHelp();
+        }
+        if (typeof handleReadingShortcuts === 'function') {
+          handleReadingShortcuts(e);
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>
