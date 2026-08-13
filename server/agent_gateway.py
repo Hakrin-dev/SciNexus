@@ -113,8 +113,9 @@ def _workflow_trace(result: dict) -> dict:
 
 
 def _direct_search(query: str, top_k: int) -> list[dict]:
-    """Supervisor/LLM 不可用时，直接使用已初始化的数据后端检索（附相关度）。"""
+    """Supervisor/LLM 不可用时，直接使用已初始化的数据后端检索（附相关度与质量分级）。"""
     from research_assistant.tools.data_source import backend  # noqa: PLC0415
+    from research_assistant.tools.quality import checklist_match_level  # noqa: PLC0415
     from research_assistant.tools.text_utils import tokenize_query  # noqa: PLC0415
 
     by_id = {p["paper_id"]: p for p in backend.papers}
@@ -125,6 +126,13 @@ def _direct_search(query: str, top_k: int) -> list[dict]:
         if p:
             p = dict(p)
             p["relevance_score"] = float(h["score"])
+            # 质量分级：四维 checklist（相关度/CCF/引用/时效）→ perfect/partial/weak
+            p["match_label"] = checklist_match_level(
+                p["relevance_score"],
+                p.get("ccf"),
+                p.get("citation_count", 0),
+                p.get("year", 0),
+            )
             papers.append(p)
     if papers:
         return papers[:top_k]

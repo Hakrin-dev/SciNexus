@@ -8,6 +8,7 @@ from research_assistant.agents.base import BaseAgent
 from research_assistant.llm import LLMProvider
 from research_assistant.schemas import RetrievedPaper, ScoutOutput, ScoutQueryPlan
 from research_assistant.tools import tools
+from research_assistant.tools.quality import checklist_match_level
 
 # 常见中文填充词（mock 阶段代替分词）
 _FILLERS = (
@@ -112,20 +113,17 @@ class ScoutAgent(BaseAgent):
             seen.setdefault(hit["paper_id"], hit)
 
         timestamp = datetime.now(timezone.utc).isoformat()
-        label_map = {"perfect": "PERFECT", "partial": "PARTIAL", "weak": "WEAK"}
         papers: list[RetrievedPaper] = []
         for hit in seen.values():
-            level = label_map.get(str(hit.get("match_label", "")).lower())
             venue = hit.get("venue") or ""
             heat = hit.get("heat") or ""
-            if not level:
-                blob = (hit.get("title", "") + hit.get("author", "") + venue).lower()
-                if any(t in blob for t in plan.core_topics):
-                    level = "PERFECT"
-                elif plan.core_topics:
-                    level = "PARTIAL"
-                else:
-                    level = "WEAK"
+            # 质量分级：四维 checklist（相关度/CCF/引用/时效）→ 三级，替代关键词启发式
+            level = checklist_match_level(
+                float(hit.get("_score", 0.0)),
+                hit.get("ccf"),
+                hit.get("citation_count", 0),
+                hit.get("year", 0),
+            ).upper()
             papers.append(
                 RetrievedPaper(
                     paper_id=hit["paper_id"],
@@ -142,7 +140,7 @@ class ScoutAgent(BaseAgent):
                     abstract=hit.get("abstract") or "",
                     ccf=hit.get("ccf"),
                     heat=heat or None,
-                    match_label=hit.get("match_label"),
+                    match_label=level.lower(),
                     keywords=hit.get("keywords", []),
                     relevance_score=float(hit.get("_score", 0.0)),
                 )

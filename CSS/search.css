@@ -734,6 +734,29 @@
   color: var(--brand-blue);
 }
 
+/* 质量分级徽章：checklist 三级评估（Perfect/Partial/Weak） */
+.paper-match {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.paper-match.perfect {
+  background: rgba(22, 163, 74, 0.12);
+  color: #16a34a;
+}
+.paper-match.partial {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+.paper-match.weak {
+  background: #F2F3F5;
+  color: var(--text-mid);
+}
+
 /* 论文操作按钮行（已废弃，保留样式兼容） */
 .paper-actions {
   display: flex;

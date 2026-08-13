@@ -363,6 +363,13 @@ function buildPaperCardHTML(p) {
   if (typeof p.relevance === 'number' && isFinite(p.relevance)) {
     relevanceBadge = '<span class="paper-relevance" title="相关度">相关度 ' + Math.round(p.relevance * 100) + '%</span>';
   }
+  // 质量分级徽章：checklist 三级评估（perfect/partial/weak）
+  let matchBadge = '';
+  const matchLevel = (p.match || p.matchLabel || '').toLowerCase();
+  if (matchLevel === 'perfect' || matchLevel === 'partial' || matchLevel === 'weak') {
+    const matchText = matchLevel.charAt(0).toUpperCase() + matchLevel.slice(1);
+    matchBadge = '<span class="paper-match ' + matchLevel + '" title="质量分级">' + matchText + '</span>';
+  }
 
   return '<div class="paper-card-top">'
     + '<span class="ccf-badge level-' + ccfLevel + '">' + ccfLabel + '</span>'
@@ -377,6 +384,7 @@ function buildPaperCardHTML(p) {
     + '<span class="paper-cites" title="引用量">' + citesDisplay + ' 引用</span>'
     + heat
     + relevanceBadge
+    + matchBadge
     + '<span class="footer-sep"></span>'
     + '<button class="btn-action fav" data-action="fav" data-id="' + p.id + '" data-title="' + escapeHtml(p.title) + '" title="收藏">&#9825;</button>'
     + '<button class="btn-action" data-action="read" data-id="' + p.id + '">AI 阅读</button>'
