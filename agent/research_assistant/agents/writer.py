@@ -42,10 +42,14 @@ REVIEW_SYSTEM_PROMPT = (
     "   ## 3. 方法脉络\n"
     "   ## 4. 对比分析\n"
     "   ## 5. 未来方向\n"
-    "   ## 参考文献\n"
-    "3. 文中引用论文时使用 [pid] 标记（例如 Attention Is All You Need [p1]），并在参考文献章节列出全部引用条目；\n"
+    "3. 【引用要求·必须严格遵守】\n"
+    "   - 正文中每句涉及具体方法、结论、实验数据或工作对比时，都必须在题名后紧跟 [pid] 标记引用"
+    "     （例：Attention Is All You Need [p1] 提出了完全基于注意力的 Transformer 架构）；\n"
+    "   - 不得出现没有引用支撑的事实断言；不得引用候选列表中不存在的 pid；\n"
+    "   - 提供的每篇候选论文应至少被引用一次；\n"
     "4. 采用 IEEE 风格，行文客观、严谨、专业，使用中文撰写；\n"
-    "5. 只输出 Markdown 正文本身，不要 Markdown 代码块围栏，不要多余说明文字。"
+    "5. 只输出 Markdown 正文本身（不要写「参考文献」章节，参考文献由系统自动生成编号），"
+    "   不要 Markdown 代码块围栏，不要多余说明文字。"
 )
 
 
@@ -100,6 +104,37 @@ class WriterAgent(BaseAgent):
             f"- [{pid}] {author}. {title}. {venue}, {year}.\n"
             f"  摘要: {abstract}"
         )
+
+    @staticmethod
+    def _numbered_reference(pid: str, n: str) -> str:
+        """生成编号参考文献条目：[n] 作者. 标题. 会议, 年份."""
+        paper = backend.get_paper(pid) or {}
+        title = paper.get("title") or pid
+        author = paper.get("author") or "Unknown authors"
+        year = paper.get("year") or ""
+        venue = paper.get("venue") or "Unknown venue"
+        return f"[{n}] {author}. {title}. {venue}, {year}."
+
+    @classmethod
+    def _number_citations(cls, review_md: str, cited: list[str]) -> str:
+        """把正文 [pid] 标记替换为按首次出现顺序编号的 [1][2]...，并追加编号参考文献章节。
+
+        LLM 生成的正文用 [pid] 占位，此处统一转成规范的数字引用，保证引用与
+        参考文献一一对应，且不存在幽灵引用。
+        """
+        appeared: list[tuple[int, str]] = []
+        for pid in cited:
+            pos = review_md.find(f"[{pid}]")
+            if pos >= 0:
+                appeared.append((pos, pid))
+        appeared.sort(key=lambda x: x[0])
+        ordered = [pid for _, pid in appeared] or list(cited)
+        num = {pid: str(i + 1) for i, pid in enumerate(ordered)}
+        body = review_md
+        for pid in ordered:
+            body = body.replace(f"[{pid}]", f"[{num[pid]}]")
+        refs = "\n".join(cls._numbered_reference(pid, num[pid]) for pid in ordered)
+        return body.rstrip() + "\n\n## 参考文献\n\n" + refs + "\n"
 
     def _build_literature_review_files(self, query: str, cited: list[str], latex: str,
                                        review_md: str | None = None) -> list[GeneratedFile]:
@@ -192,6 +227,8 @@ class WriterAgent(BaseAgent):
                 {"topic": self._topic_title(query), "papers": papers},
                 ReviewMarkdown,
             ).markdown
+            # 把正文 [pid] 占位转成规范数字引用 [1][2]...，并追加编号参考文献
+            review_md = self._number_citations(review_md, cited)
             generated_files = self._build_literature_review_files(query, cited, latex, review_md)
 
         content = WrittenContent(
