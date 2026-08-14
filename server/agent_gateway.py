@@ -119,7 +119,7 @@ def _direct_search(query: str, top_k: int) -> list[dict]:
     from research_assistant.tools.text_utils import tokenize_query  # noqa: PLC0415
 
     by_id = {p["paper_id"]: p for p in backend.papers}
-    hits = backend.vector.search(query, top_k)
+    hits = backend.hybrid_search(query, top_k)
     papers: list[dict] = []
     for h in hits:
         p = by_id.get(h["paper_id"])

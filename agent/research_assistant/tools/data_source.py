@@ -232,6 +232,22 @@ class Backend:
                 return p
         return None
 
+    def hybrid_search(self, query: str, top_k: int = 10) -> list[dict]:
+        """三路 RRF 融合检索：稠密向量 + BM25 词法 + 图 PageRank。
+
+        稠密抓语义、BM25 抓精确词项、图抓引用结构，三者互补后按倒数排名融合
+        （rrf_fuse 只看排名，天然兼容三种不同量纲的分数）。每路先召回 top_k*3
+        扩大候选池，融合后截取 top_k。
+        """
+        from research_assistant.tools.vector_index import rrf_fuse  # noqa: PLC0415
+
+        pool = max(top_k * 3, top_k)
+        return rrf_fuse([
+            self.vector.search_dense(query, pool),
+            self.vector.search_sparse(query, pool),
+            self.graph.search(query, pool),
+        ])[:top_k]
+
 
 def _make_source() -> ServerMockSource | JsonSource | SqliteSource:
     from research_assistant.config import settings  # noqa: PLC0415
