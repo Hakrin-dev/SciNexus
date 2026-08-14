@@ -54,11 +54,12 @@ async function apiFetch(path, options={}) {
  */
 async function fetchPaperGraph(paperId) {
   try {
-    const res = await fetch(`${API}/papers/graph?id=${encodeURIComponent(paperId)}`, {
+    const res = await fetch(`${API}/papers/${encodeURIComponent(paperId)}/graph`, {
       headers: { 'Content-Type': 'application/json' }
     });
     if (!res.ok) throw new Error(`API error: ${res.status}`);
-    return await res.json();
+    const payload = await res.json();
+    return (payload && payload.data) ? payload.data : null;
   } catch(e) {
     console.warn('[fetchPaperGraph] 请求失败，将使用模拟数据:', e.message);
     return null;

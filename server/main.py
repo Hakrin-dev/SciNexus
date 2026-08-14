@@ -41,6 +41,7 @@ try:
         get_structured as _agent_get_structured,
         get_fulltext as _agent_get_fulltext,
         match_venues as _agent_match_venues,
+        get_paper_graph as _agent_get_paper_graph,
     )
 except Exception as _import_err:  # pragma: no cover
     logger = None
@@ -75,6 +76,9 @@ except Exception as _import_err:  # pragma: no cover
 
     def _agent_match_venues(*_a, **_k):
         raise RuntimeError("agent 网关不可用")
+
+    def _agent_get_paper_graph(*_a, **_k):
+        return {"nodes": [], "links": [], "originPaper": None, "priorWorks": [], "derivativeWorks": []}
 
 START_TIME = time.time()
 
@@ -387,6 +391,20 @@ def get_paper_fulltext(paper_id: str):
         except Exception as exc:
             logger.warning(f"Agent 论文全文失败，回退 404: {exc}")
     raise HTTPException(status_code=404, detail="论文未找到")
+
+@app.get("/api/papers/{paper_id}/graph")
+def get_paper_graph(paper_id: str):
+    """
+    获取某论文的引用图谱（前置/衍生/同主题邻居），供前端 ECharts 力导向图渲染。
+    :param paper_id: 论文唯一标识
+    :return:        {nodes, links, originPaper, priorWorks, derivativeWorks}
+    """
+    if AGENT_ENABLED:
+        try:
+            return {"data": _agent_get_paper_graph(paper_id)}
+        except Exception as exc:
+            logger.warning(f"Agent 论文图谱失败: {exc}")
+    return {"data": {"nodes": [], "links": [], "originPaper": None, "priorWorks": [], "derivativeWorks": []}}
 
 # ==================== 语义搜索 ====================
 @app.post("/api/search")

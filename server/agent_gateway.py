@@ -372,6 +372,17 @@ def get_fulltext(paper_id: str) -> dict | None:
     return {"paper_id": paper_id, "has_pdf": has_pdf, "source": source, "chunks": chunks}
 
 
+def get_paper_graph(paper_id: str) -> dict:
+    """获取某论文的引用图谱（前置/衍生/同主题邻居），供前端 ECharts 可视化。
+
+    返回 {nodes, links, originPaper, priorWorks, derivativeWorks}；论文不存在时
+    nodes 为空列表，前端据此回退到 mock 演示。
+    """
+    from research_assistant.tools.data_source import backend  # noqa: PLC0415
+
+    return backend.graph.get_paper_graph(paper_id)
+
+
 def _paper_in_mock_library(paper_id: str) -> bool:
     """论文是否存在于 server mock 论文库（p1-p11 等未入库 agent 后端的演示论文）。
 

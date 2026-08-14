@@ -142,3 +142,79 @@ class GraphIndex:
                 continue
             nbrs |= set(self.graph.successors(s)) | set(self.graph.predecessors(s))
         return nbrs
+
+    # ------------------------------------------------------------------ #
+    # get_paper_graph：以某论文为中心的引用子图（供前端知识图谱可视化）
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _short_name(p: dict) -> str:
+        """节点短标签：第一作者姓_年份，缺作者用截断标题。"""
+        author = (p.get("author") or "").strip()
+        year = p.get("year") or ""
+        if author:
+            first = author.split(",")[0].strip().split(" ")[0] or author.split(",")[0].strip()
+            return f"{first}_{year}" if year else first
+        title = p.get("title") or ""
+        return (title[:20] + "…") if len(title) > 20 else (title or p.get("paper_id", ""))
+
+    def _paper_graph_node(self, pid: str) -> dict:
+        p = self._by_id[pid]
+        return {
+            "id": pid,
+            "name": self._short_name(p),
+            "paperId": pid,
+            "citations": p.get("citation_count", 0),
+            "year": p.get("year", 0),
+            "title": p.get("title", ""),
+            "authors": p.get("author", ""),
+            "venue": p.get("venue", ""),
+            "abstract": p.get("abstract", ""),
+        }
+
+    def get_paper_graph(self, paper_id: str, max_each: int = 12) -> dict:
+        """以某论文为中心的引用子图：前置（被引）、衍生（引用）、同主题邻居。
+
+        返回前端 ECharts 图谱格式 {nodes, links, originPaper, priorWorks, derivativeWorks}；
+        论文不存在时返回空结构。
+        """
+        if paper_id not in self._by_id:
+            return {"nodes": [], "links": [], "originPaper": None,
+                    "priorWorks": [], "derivativeWorks": []}
+
+        prior: list[str] = []
+        derivative: list[str] = []
+        related: list[str] = []
+        for nbr in self.graph.successors(paper_id):
+            rel = self.graph.get_edge_data(paper_id, nbr, {}).get("relation")
+            if rel == "cites":
+                prior.append(nbr)
+            elif rel == "same_method":
+                related.append(nbr)
+        for nbr in self.graph.predecessors(paper_id):
+            rel = self.graph.get_edge_data(nbr, paper_id, {}).get("relation")
+            if rel == "cites":
+                derivative.append(nbr)
+            elif rel == "same_method":
+                related.append(nbr)
+
+        prior = list(dict.fromkeys(prior))[:max_each]
+        derivative = list(dict.fromkeys(derivative))[:max_each]
+        seen = {paper_id, *prior, *derivative}
+        related = [i for i in dict.fromkeys(related) if i not in seen][:max_each]
+
+        nodes = [self._paper_graph_node(pid) for pid in [paper_id, *prior, *derivative, *related]]
+        links: list[dict] = []
+        for pid in prior:
+            links.append({"source": paper_id, "target": pid, "relation": "cited"})
+        for pid in derivative:
+            links.append({"source": pid, "target": paper_id, "relation": "cites"})
+        for pid in related:
+            links.append({"source": paper_id, "target": pid, "relation": "related"})
+
+        return {
+            "nodes": nodes,
+            "links": links,
+            "originPaper": self._paper_graph_node(paper_id),
+            "priorWorks": [self._paper_graph_node(pid) for pid in prior],
+            "derivativeWorks": [self._paper_graph_node(pid) for pid in derivative],
+        }
