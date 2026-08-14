@@ -68,6 +68,8 @@ class Settings:
     sqlite_path: str = field(default_factory=lambda: os.getenv("SQLITE_PATH", ""))
     # 向量检索 embedding 模型（Ollama 本地；不可用自动降级词法）
     embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "nomic-embed-text"))
+    # 交叉编码器重排模型（可选，sentence-transformers；未安装/不可用自动跳过重排）
+    rerank_model: str = field(default_factory=lambda: os.getenv("RERANK_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"))
 
     @property
     def mock_mode(self) -> bool:

@@ -113,27 +113,36 @@ def _workflow_trace(result: dict) -> dict:
 
 
 def _direct_search(query: str, top_k: int) -> list[dict]:
-    """Supervisor/LLM 不可用时，直接使用已初始化的数据后端检索（附相关度与质量分级）。"""
+    """Supervisor/LLM 不可用时，直接使用已初始化的数据后端检索（附相关度与质量分级）。
+
+    两阶段：① RRF 混合召回（稠密 + BM25 + 图）top_k*3；② 交叉编码器精排（可选，
+    不可用则保持 RRF 顺序）。
+    """
     from research_assistant.tools.data_source import backend  # noqa: PLC0415
     from research_assistant.tools.quality import checklist_match_level  # noqa: PLC0415
+    from research_assistant.tools.reranker import reranker  # noqa: PLC0415
     from research_assistant.tools.text_utils import tokenize_query  # noqa: PLC0415
 
     by_id = {p["paper_id"]: p for p in backend.papers}
-    hits = backend.hybrid_search(query, top_k)
+    # 阶段1：RRF 混合召回（多召回一些候选供交叉编码器精排）
+    hits = backend.hybrid_search(query, top_k * 3)
     papers: list[dict] = []
     for h in hits:
         p = by_id.get(h["paper_id"])
         if p:
             p = dict(p)
             p["relevance_score"] = float(h["score"])
-            # 质量分级：四维 checklist（相关度/CCF/引用/时效）→ perfect/partial/weak
-            p["match_label"] = checklist_match_level(
-                p["relevance_score"],
-                p.get("ccf"),
-                p.get("citation_count", 0),
-                p.get("year", 0),
-            )
             papers.append(p)
+    # 阶段2：交叉编码器精排（覆盖 relevance_score 为交叉编码分；不可用则保持 RRF 顺序）
+    papers = reranker.rerank(query, papers, top_k)
+    # 质量分级：四维 checklist（相关度/CCF/引用/时效）→ perfect/partial/weak
+    for p in papers:
+        p["match_label"] = checklist_match_level(
+            p["relevance_score"],
+            p.get("ccf"),
+            p.get("citation_count", 0),
+            p.get("year", 0),
+        )
     if papers:
         return papers[:top_k]
 
