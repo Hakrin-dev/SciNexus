@@ -40,6 +40,7 @@ try:
         recommended_papers as _agent_recommended,
         get_structured as _agent_get_structured,
         get_fulltext as _agent_get_fulltext,
+        match_venues as _agent_match_venues,
     )
 except Exception as _import_err:  # pragma: no cover
     logger = None
@@ -70,6 +71,9 @@ except Exception as _import_err:  # pragma: no cover
         return None
 
     def _agent_get_fulltext(*_a, **_k):
+        raise RuntimeError("agent 网关不可用")
+
+    def _agent_match_venues(*_a, **_k):
         raise RuntimeError("agent 网关不可用")
 
 START_TIME = time.time()
@@ -172,6 +176,7 @@ class SubmissionMatchRequest(BaseModel):
     title: str                              # 论文标题
     abstract: str                           # 论文摘要
     keywords: Optional[list[str]] = None    # 论文关键词列表
+    use_llm: bool = False                   # True=走 critic LLM 语义分析；False=纯关键词匹配（默认）
 
 class LibraryAddRequest(BaseModel):
     """添加到文献库请求"""
@@ -709,10 +714,32 @@ def _venue_match_score(text: str, domain: str) -> int:
 @app.post("/api/submission/match")
 def submit_match(req: SubmissionMatchRequest):
     """
-    投稿方向匹配：根据论文标题/摘要/关键词，为每条期刊/会议计算真实匹配分数和理由
-    :param req: 投稿匹配请求体
-    :return:    匹配度最高的前5个期刊/会议
+    投稿方向匹配：根据论文标题/摘要/关键词，为每条期刊/会议计算匹配分数和理由。
+
+    use_llm=True 时走 critic agent 的 LLM 语义分析（更细致，但慢）；默认 False
+    走纯关键词确定性匹配（快、零 LLM）。LLM 失败时自动回退关键词匹配。
     """
+    # LLM 语义分析模式（可选）
+    if req.use_llm:
+        try:
+            result = _agent_match_venues(req.title, req.abstract, req.keywords or [])
+            by_name = {j["name"]: j for j in JOURNALS}
+            matched = []
+            for v in result.get("recommended_venues", []):
+                j = by_name.get(v.get("name", ""))
+                if not j:
+                    continue
+                score = int(v.get("score", 0))
+                matched.append({**j, "matchPct": score,
+                    "matchClass": "high" if score >= 80 else "mid" if score >= 60 else "low",
+                    "matchReason": result.get("match_reason") or f"LLM 推荐 {j['name']}"})
+            if matched:
+                matched.sort(key=lambda j: j["matchPct"], reverse=True)
+                return {"data": matched[:5], "input": {"title": req.title, "keywords": req.keywords or []}, "mode": "llm"}
+        except Exception as exc:
+            logger.warning(f"LLM 投稿匹配失败，回退关键词匹配: {exc}")
+
+    # 关键词匹配模式（默认）
     text = " ".join(filter(None, [req.title, req.abstract, " ".join(req.keywords or [])])).lower()
     matched = []
     for j in JOURNALS:
@@ -724,7 +751,8 @@ def submit_match(req: SubmissionMatchRequest):
     matched.sort(key=lambda j: j["matchPct"], reverse=True)
     return {
         "data": matched[:5],
-        "input": {"title": req.title, "keywords": req.keywords or []}
+        "input": {"title": req.title, "keywords": req.keywords or []},
+        "mode": "keyword",
     }
 
 @app.get("/api/trends")

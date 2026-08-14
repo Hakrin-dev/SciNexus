@@ -194,6 +194,32 @@ def search_papers(query: str, top_k: int = 10, task_type: str | None = None) -> 
     }
 
 
+def match_venues(title: str, abstract: str, keywords: list[str] | None = None) -> dict:
+    """投稿方向匹配（LLM 语义分析）：调用 critic agent（submission 意图）。
+
+    返回 {"recommended_venues": [{name, score}], "match_reason": str}；
+    LLM 不可用或 critic 未返回推荐时抛异常，由调用方回退到关键词匹配。
+    """
+    query = f"论文标题：{title}。摘要：{abstract}。"
+    if keywords:
+        query += f"关键词：{'、'.join(keywords)}。"
+    query += "请推荐最合适的投稿会议/期刊。"
+    result = _run_agent(query, task_type="submission")
+    outputs = (result.get("working_memory") or {}).get("agent_outputs") or {}
+    critic_out = outputs.get("critic") or {}
+    report = critic_out.get("review_report") or {}
+    analysis = report.get("venue_matching_analysis") or {}
+    recommended = analysis.get("recommended_venues") or []
+    if not recommended:
+        raise RuntimeError("critic 未返回投稿推荐")
+    return {
+        "recommended_venues": [
+            {"name": v.get("name"), "score": int(v.get("score", 0))} for v in recommended
+        ],
+        "match_reason": analysis.get("match_reason", ""),
+    }
+
+
 def _extract_generated_files(result: dict) -> list[dict] | None:
     """从 writer / code_assistant 最终输出提取生成文件列表。
 
