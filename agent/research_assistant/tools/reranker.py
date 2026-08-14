@@ -39,6 +39,8 @@ class CrossEncoderReranker:
             # 避免环境里 Keras 3 / TensorFlow 与 transformers 的兼容冲突。
             os.environ.setdefault("USE_TF", "0")
             os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
+            # 国内用 hf-mirror.com 镜像下载模型，规避 huggingface.co 被墙
+            os.environ.setdefault("HF_ENDPOINT", settings.hf_endpoint)
         except Exception:
             pass
         self._model = self._load_with_timeout()

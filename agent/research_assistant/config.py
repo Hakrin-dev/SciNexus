@@ -70,6 +70,8 @@ class Settings:
     embedding_model: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "nomic-embed-text"))
     # 交叉编码器重排模型（可选，sentence-transformers；未安装/不可用自动跳过重排）
     rerank_model: str = field(default_factory=lambda: os.getenv("RERANK_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"))
+    # HuggingFace 镜像端点（国内默认 hf-mirror.com，解决模型下载被墙）
+    hf_endpoint: str = field(default_factory=lambda: os.getenv("HF_ENDPOINT", "https://hf-mirror.com"))
 
     @property
     def mock_mode(self) -> bool:
