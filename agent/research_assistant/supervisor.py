@@ -154,6 +154,13 @@ vector_rag、graph_rag、pdf_parser、graph_expand、venue_db、evidence_check�
 倾向（按依赖串联）：
   scout(retrieve evidence), writer(write literature review), critic(review citations)  # ✅
 
+【自主科研模式（重要）】
+task_type=autonomous_research 表示「自主科研模式」，但**绝不等于必须跑满全部 agent**。
+请根据用户 query 的实际需求，只选择完成该请求真正需要的 agent：
+- 分析/趋势类（如「ai发展分析」「xx研究现状」）→ scout + librarian + writer，无需 code_assistant / research_design / critic；
+- 代码复现类（如「帮我复现 xx 算法」）→ scout + code_assistant；
+- 只有「从检索到成文到审稿的全流程」才按上游依赖串联全部 agent。
+
 按上游依赖排序步骤。只返回符合给定 JSON Schema 的结果。"""
 
 
@@ -284,7 +291,8 @@ class Supervisor:
             "working_memory": state.get("working_memory") or {},
             "current_task_state": (state.get("working_memory") or {}).get("task_state") or {},
         }
-        if explicit_task_type and _forced_intent(str(explicit_task_type)) is not None:
+        if explicit_task_type and _forced_intent(str(explicit_task_type)) is not None \
+                and str(explicit_task_type) != "autonomous_research":
             decision = SupervisorDecision(**forced_decision(str(explicit_task_type)))
         else:
             if isinstance(self.llm, MockProvider):
