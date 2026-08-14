@@ -686,24 +686,45 @@ def get_journals(sort_by: str = Query("match")):
         result.sort(key=lambda j: j["matchPct"], reverse=True)
     return {"data": result}
 
+# 研究方向 → 代表性关键词（用于投稿方向匹配）
+_DOMAIN_KEYWORDS: dict[str, list[str]] = {
+    "计算机视觉": ["vision", "image", "图像", "视觉", "detection", "检测", "segmentation", "分割",
+                   "recognition", "识别", "video", "视频", "object", "目标"],
+    "自然语言处理": ["language", "nlp", "文本", "语言", "translation", "翻译", "transformer", "attention",
+                     "语义", "semantic", "text", "generation", "生成", "llm", "大模型", "自然语言"],
+    "机器学习": ["learning", "训练", "machine", "neural", "神经网络", "deep", "深度学习", "model", "模型",
+                 "optimization", "优化", "regression", "回归", "classification", "分类", "reinforcement", "强化"],
+    "人工智能": ["ai", "智能", "agent", "reasoning", "推理", "artificial", "人工智能", "decision", "决策",
+                 "planning", "规划", "knowledge", "知识"],
+}
+
+
+def _venue_match_score(text: str, domain: str) -> int:
+    """按方向关键词命中数计算投稿匹配分（30~95，命中越多越高）。"""
+    terms = _DOMAIN_KEYWORDS.get(domain, [])
+    hits = sum(1 for t in terms if t in text)
+    return min(95, 35 + hits * 15) if hits else 30
+
+
 @app.post("/api/submission/match")
 def submit_match(req: SubmissionMatchRequest):
     """
-    投稿方向匹配：根据论文标题和摘要，为每条期刊/会议计算匹配分数和理由
+    投稿方向匹配：根据论文标题/摘要/关键词，为每条期刊/会议计算真实匹配分数和理由
     :param req: 投稿匹配请求体
     :return:    匹配度最高的前5个期刊/会议
     """
+    text = " ".join(filter(None, [req.title, req.abstract, " ".join(req.keywords or [])])).lower()
     matched = []
     for j in JOURNALS:
-        score = random.randint(50, 95)
+        domain = j.get("domain", "")
+        score = _venue_match_score(text, domain)
         matched.append({**j, "matchPct": score,
             "matchClass": "high" if score >= 80 else "mid" if score >= 60 else "low",
-            "matchReason": f"研究方向与{j['domain']}领域高度相关"
-        })
+            "matchReason": f"研究方向与{domain}领域相关" if score >= 60 else f"与{domain}方向契合度一般"})
     matched.sort(key=lambda j: j["matchPct"], reverse=True)
     return {
         "data": matched[:5],
-        "input": {"title": req.title, "keywords": req.keywords}
+        "input": {"title": req.title, "keywords": req.keywords or []}
     }
 
 @app.get("/api/trends")

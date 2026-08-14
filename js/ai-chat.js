@@ -504,8 +504,8 @@ async function sendSubChat() {
       { role: 'user', content: text }
     ];
 
-    // 流式调用，实时显示
-    const streamBody = await deepseekChat(msgs, true);
+    // 流式调用，实时显示（task_type=submission 让后端路由到 critic 做投稿匹配分析）
+    const streamBody = await deepseekChat(msgs, true, { taskType: 'submission' });
     const reader = streamBody.getReader();
     const decoder = new TextDecoder();
     let fullReply = '';
