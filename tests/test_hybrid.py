@@ -51,3 +51,17 @@ def test_rank_1_in_all_lists_is_top() -> None:
     fused = rrf_fuse([l1, l2, l3], k=60)
     assert fused[0]["paper_id"] == "A"
     assert fused[0]["score"] == 1.0
+
+
+def test_weighted_rrf_prefers_dense() -> None:
+    """加权 RRF：稠密信号权重高时，仅稠密命中的论文排第一。"""
+    dense = [{"paper_id": "A", "score": 0.9}]
+    sparse = [{"paper_id": "B", "score": 0.9}]
+    graph = [{"paper_id": "C", "score": 0.9}]
+    # 等权：三者各 rank1，分数相同
+    equal = rrf_fuse([dense, sparse, graph], k=60)
+    assert equal[0]["score"] == equal[1]["score"] == equal[2]["score"]
+    # 加权（稠密 3 倍）→ A 排第一
+    weighted = rrf_fuse([dense, sparse, graph], k=60, weights=[3.0, 1.0, 1.0])
+    assert weighted[0]["paper_id"] == "A"
+    assert weighted[0]["score"] > weighted[1]["score"]

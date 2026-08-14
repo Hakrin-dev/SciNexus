@@ -25,23 +25,26 @@ from research_assistant.tools.data_source import DATA_DIR
 from research_assistant.tools.text_utils import tokenize_query
 
 
-def rrf_fuse(ranked_lists: list[list[dict]], k: int = 60) -> list[dict[str, Any]]:
+def rrf_fuse(ranked_lists: list[list[dict]], k: int = 60,
+             weights: list[float] | None = None) -> list[dict[str, Any]]:
     """倒数排名融合（Reciprocal Rank Fusion）：融合多个已排序的召回列表。
 
     每个列表为 [{paper_id, score}]，按 score 降序。RRF 只看排名不看原始分数，
     因此可融合不同量纲的信号（余弦相似度 / BM25 饱和分 / 图 PageRank）。
     k 为平滑常数（常取 60），越大排名差异的权重越小。
+    weights 为每路召回的权重（默认等权 1.0）；如语义优先可用 [2.0, 1.0, 0.5]。
 
     返回按融合分降序的 [{paper_id, score}]；score 归一化到 0..1（除以非空
-    列表数对应的理论最大分），反映「多路召回共识强度」，可直接用于相关度展示。
+    列表的权重和对应的理论最大分），反映「多路召回加权共识强度」。
     """
+    if weights is None:
+        weights = [1.0] * len(ranked_lists)
     fused: dict[str, float] = {}
-    for lst in ranked_lists:
+    for w, lst in zip(weights, ranked_lists):
         for rank, item in enumerate(lst, start=1):
             pid = item["paper_id"]
-            fused[pid] = fused.get(pid, 0.0) + 1.0 / (k + rank)
-    nonempty = sum(1 for lst in ranked_lists if lst)
-    max_score = nonempty / (k + 1.0)
+            fused[pid] = fused.get(pid, 0.0) + w / (k + rank)
+    max_score = sum(w for w, lst in zip(weights, ranked_lists) if lst) / (k + 1.0)
     if max_score <= 0:
         return []
     ranked = sorted(fused.items(), key=lambda kv: -kv[1])
@@ -183,8 +186,11 @@ class VectorIndex:
         return self._lexical_search(query, top_k)
 
     def hybrid_search(self, query: str, top_k: int = 10) -> list[dict[str, Any]]:
-        """稠密 + BM25 两路 RRF 融合。"""
-        return rrf_fuse([self.search_dense(query, top_k), self._lexical_search(query, top_k)])[:top_k]
+        """稠密 + BM25 两路加权 RRF（稠密 2.0 : BM25 1.0，语义优先）。"""
+        return rrf_fuse(
+            [self.search_dense(query, top_k), self._lexical_search(query, top_k)],
+            weights=[2.0, 1.0],
+        )[:top_k]
 
     def _lexical_search(self, query: str, top_k: int) -> list[dict[str, Any]]:
         """BM25 词法打分：Σ_t idf(t) * tf*(k1+1) / (tf + k1*(1 - b + b*|D|/avgdl))。
