@@ -414,10 +414,23 @@
         initReadingPage(paperId);
       }
 
-      // 初始化增强功能
-      if (typeof initReadingEnhanced === 'function') {
-        initReadingEnhanced(paperId);
+      // 初始化增强功能：本地 fallback 只有 5 篇演示论文，其余论文需从后端拉取详情，
+      // 否则 initReadingEnhanced 找不到 id 会兜底成第一篇（Attention Is All You Need）。
+      async function bootReading(pid) {
+        if (pid && typeof apiFetch === 'function') {
+          try {
+            const resp = await apiFetch('/papers/' + encodeURIComponent(pid));
+            const detail = resp && resp.data;
+            if (detail && detail.id) {
+              window.papers = [detail].concat(window.papers || []);
+            }
+          } catch (e) { /* 拉取失败则用本地 fallback 兜底 */ }
+        }
+        if (typeof initReadingEnhanced === 'function') {
+          initReadingEnhanced(pid);
+        }
       }
+      bootReading(paperId);
 
       // 全局键盘快捷键
       document.addEventListener('keydown', function(e) {
