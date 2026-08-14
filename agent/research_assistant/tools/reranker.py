@@ -33,11 +33,36 @@ class CrossEncoderReranker:
             return
         self._tried = True
         try:
-            from sentence_transformers import CrossEncoder  # noqa: PLC0415
+            import os  # noqa: PLC0415
 
-            self._model = CrossEncoder(self.model_name)
+            # sentence-transformers 只需 torch；跳过 transformers 的 TF 导入，
+            # 避免环境里 Keras 3 / TensorFlow 与 transformers 的兼容冲突。
+            os.environ.setdefault("USE_TF", "0")
+            os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
         except Exception:
-            self._model = None
+            pass
+        self._model = self._load_with_timeout()
+
+    def _load_with_timeout(self, timeout: float = 30.0) -> Any:
+        """后台线程加载模型；超时（如首次下载模型卡在慢网）则返回 None，不阻塞检索。"""
+        import threading  # noqa: PLC0415
+
+        result: dict[str, Any] = {}
+
+        def _load() -> None:
+            try:
+                from sentence_transformers import CrossEncoder  # noqa: PLC0415
+
+                result["model"] = CrossEncoder(self.model_name)
+            except Exception:
+                result["model"] = None
+
+        t = threading.Thread(target=_load, daemon=True)
+        t.start()
+        t.join(timeout)
+        if t.is_alive():
+            return None
+        return result.get("model")
 
     @staticmethod
     def _doc_text(p: dict) -> str:
