@@ -144,9 +144,9 @@ class WriterAgent(BaseAgent):
         """
         topic = self._topic_title(query)
         slug = self._topic_slug(query)
-        cited = cited[:8]
+        cited = cited[:20]
         references = "\n".join(self._paper_line(pid) for pid in cited) or "- 暂无可用引用，请先完成论文检索。"
-        summaries = "\n".join(self._paper_summary(pid) for pid in cited[:5]) or "- 暂无可用论文摘要。"
+        summaries = "\n".join(self._paper_summary(pid) for pid in cited[:10]) or "- 暂无可用论文摘要。"
         if not review_md:
             review_md = f"""# {topic}：文献综述
 
@@ -188,9 +188,9 @@ class WriterAgent(BaseAgent):
 
         # 阶段1. LLM 规划：确定章节类型、目标风格与拟引用文献（mock 回显确定性计划）
         plan: WriterPlan = self.generate(
-            {"user_query": query, "available_papers": paper_ids[:3]},
+            {"user_query": query, "available_papers": paper_ids[:20]},
             WriterPlan,
-            {"section_type": "Abstract", "style_preference": "IEEE", "cited_paper_ids": paper_ids[:3]},
+            {"section_type": "Abstract", "style_preference": "IEEE", "cited_paper_ids": paper_ids[:20]},
         )
 
         # 阶段2. 工具执行：从全局工作记忆中提取证据链 Chunk 作为断言锚点
@@ -200,7 +200,7 @@ class WriterAgent(BaseAgent):
         anchors = [c["chunk_id"] for c in chunks[:3]]
 
         # 阶段3. 生成包含真实引用的 LaTeX 文本，建立「断言-证据」映射表
-        cited = list(plan.cited_paper_ids) or paper_ids[:3]
+        cited = list(plan.cited_paper_ids) or paper_ids[:20]
         latex = (
             "\\section{Abstract}\n"
             f"我们针对 {query} 展开研究，相关工作建立在已有成果之上"

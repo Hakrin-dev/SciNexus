@@ -50,10 +50,22 @@ class CodeAssistantAgent(BaseAgent):
         super().__init__(llm)
         self.system_prompt = SYSTEM_PROMPT
 
+    @staticmethod
+    def _paper_blob(pid: str) -> str:
+        """论文信息块（题名 + 摘要），供 LLM 生成引用论文的代码。"""
+        from research_assistant.tools.data_source import backend  # noqa: PLC0415
+
+        p = backend.get_paper(pid) or {}
+        title = p.get("title") or pid
+        abstract = (p.get("abstract") or "暂无摘要。").strip().replace("\n", " ")
+        return f"[{pid}] {title}：{abstract[:200]}"
+
     def run(self, state: dict) -> dict:
         wm = state.get("working_memory") or {}
         ev = wm.get("evidence_chain_index") or {}
         paper_ids = ev.get("paper_ids") or []
+        # 证据链论文摘要（供 LLM 生成引用论文的代码）
+        paper_context = "\n".join(self._paper_blob(pid) for pid in paper_ids[:10]) if paper_ids else "（无上游论文，生成通用实验代码）"
 
         # SOP1. 需求解析：从上游 Research Design 提取 proposal 中的实验设计和约束条件
         proposal = (wm.get("agent_outputs") or {}).get("research_design", {}).get("proposal", {})
@@ -118,6 +130,8 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 '''
+        # 修正 lines_of_code 为实际行数（原为编造估算 200 + len(...)*20）
+        artifacts.main_code.lines_of_code = main_py.count("\n") + 1
         config_yaml = f"""seed: 42
 dataset: {dataset_tag}
 baselines:
@@ -179,6 +193,7 @@ def test_train_returns_status():
             "code_specifications": input_model.code_specifications.model_dump(),
             "dependencies": {"required_packages": baselines, "datasets": datasets, "metrics": metrics},
             "evidence_chain": paper_ids,
+            "papers": paper_context,
         }
         output: CodeAssistantOutput = self.generate(payload, CodeAssistantOutput, draft)
         wm = self.remember(state, "generate reproducible code", output.model_dump(), paper_ids=paper_ids)
